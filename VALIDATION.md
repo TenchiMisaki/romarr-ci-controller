@@ -1,6 +1,6 @@
 # Validation receipt — controller v01
 
-**Current status: ARCHIVE-TOOL-ENABLED FULL BASELINE PASS (November 14, 2026); exact PR workflows and scheduling not yet validated.**
+**Current status (November 14, 2026): Stage 1 manual baseline and PR #25 exact-head pytest PASS. Stage 2 watcher candidate under review in controller PR #1; live dispatch, scheduling, and CodeRabbit monitoring NOT ACCEPTED.**
 
 ## Source-derived design checks
 
@@ -35,3 +35,17 @@
 ## Scope and recovery
 
 The full **main** baseline is now live-accepted for the stated source and controller revisions. Before treating any ROMarr PR as validated, run the manual PR-specific workflow on its own exact current head, examine all skips and independent artifact outcomes, and apply the separate CodeRabbit/review gates. Do not enable scheduling until independently reviewed and accepted. If a failure occurs, preserve the run evidence and original source; do not modify the ROMarr fork or private synchronization automation to compensate.
+
+## Stage 1 exact-PR acceptance — November 14, 2026 UTC
+
+- [Manual PR #25 run #43630641521](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43630641521) used controller HEAD `3cdf6201ff70dae399490cd48dd1923eb2b0587f`, testing the immutable ROMarr PR #25 commit `1e5796032968f574b41772e1674d1d7a8d64d16c`. Actual GitHub-hosted Python 3.13/Node.js 24 full pytest **PASS: 3,864 passed / 2 skipped / 0 failed/errors**; exact 3,866 anonymized test-case records were independently reconciled.
+- Source postcheck **UNCHANGED**; private JUnit/logs were not published, sanitized five-member evidence ZIP `romarr-pytest-handoff-43630641521-1` (artifact ID `14128242267`) passed manifest SHA-256 and case totals, and the final acceptance gate completed PASS. The controller repository's GitHub-hosted job and artifact were independently retrieved. This is source testing at **that historical SHA**, not current PR #25 head: that head later advanced to `0a54b3fdcb082b43a9b0b1c07a0edb657901e4b2`.
+- The separate ROMarr upstream Docker/Windows CI does not replace this controller's exact-head pytest workflow. Do not attach this historical PASS to new ROMarr revisions.
+
+## Stage 2 controller PR #1 — candidate review, November 14, 2026 UTC
+
+- [Open controller PR #1](https://github.com/TenchiMisaki/romarr-ci-controller/pull/1), `feature/stage2-pr-watch` → `main`, holds the **manual-only** discovery and exact-head guarded dispatch candidate. Controller `main` and accepted Stage 1 workflow are unchanged. The earlier conversation switch to ROMarr upstream #188 did **not** overwrite this controller PR.
+- Verified source controls: open/non-draft personal-fork PRs only; exclude `Backlog:`, `notes/`, and `review/` work; allow legitimate stacked feature PRs (e.g. ROMarr PR #21); require 40-hex head/base SHA and stable PR identity. API mutations are restricted to the controller's own Git claim-reference and workflow-dispatch endpoints. No permission to mutate ROMarr source.
+- New read-only controller unit CI initially failed **1 test, 2 errors** because its test environment omitted the required `pytest` installation. The failures were in pre-existing real-subprocess test fixtures, not the watcher logic or ROMarr tests. CI was corrected to install `pytest==9.2.0`, matching Stage 1. [Run #43640462488](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43640462488) then reported **57 Python unittest cases PASS**, exit 0, with Python compile step PASS. This test run covers its exact recorded earlier controller SHA; subsequent code/Markdown edits require updated exact-head CI.
+- The controller's watcher-dispatch API uses GitHub's officially documented `return_run_details=true` for direct run-ID correlation; this API behavior was **documentation-verified** but **live authenticated dispatch NOT TESTED**. Dedup currently uses PR + head SHA claim tags, not base SHA; a base-only change needs an explicit reconciliation rule before unattended operation.
+- **Stage 2 NOT ACCEPTED / NOT INSTALLED:** no scheduled watcher, live controller claim-tag creation, mutation permission acceptance, CodeRabbit monitoring, automated correction, upstream comment, contributor-branch promotion, or production deployment. An unmerged feature workflow cannot be dispatched through the default-branch Actions UI. Preserve the manual Stage 1 fallback. Next: verify final-head unit CI, decide Stage 2 default-branch/test-rollout authorization, then controlled audit and dispatch before considering scheduling or review monitoring.
