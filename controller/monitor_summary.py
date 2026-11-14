@@ -26,6 +26,52 @@ def clean_status(value, field):
     return value
 
 
+def next_test_candidate(records):
+    """Select at most one potentially untested immutable revision, without API writes.
+
+    This is advisory only. The mutating Stage 2C watcher must independently
+    revalidate full PR/base/head identity and claim state immediately before
+    any future dispatch. Any incomplete collection prevents queue selection.
+    """
+    if not isinstance(records, list) or len(records) > 1000:
+        raise SummaryError("Invalid candidate result list")
+    numbers = set()
+    candidates = []
+    incomplete = False
+    for record in records:
+        if not isinstance(record, dict):
+            raise SummaryError("Invalid candidate record")
+        number = record.get("number")
+        if (isinstance(number, bool) or not isinstance(number, int) or
+                not 1 <= number <= 999999 or number in numbers):
+            raise SummaryError("Invalid or duplicate candidate PR number")
+        numbers.add(number)
+        state = clean_status(record.get("status"), "Candidate PR state")
+        if state == "COLLECTION_FAILED":
+            incomplete = True
+            continue
+        if state != "CURRENT_METADATA_ONLY":
+            raise SummaryError("Candidate PR lacks current metadata")
+        head, base = record.get("sha"), record.get("base_sha")
+        if (not isinstance(head, str) or not SHA.fullmatch(head) or
+                not isinstance(base, str) or not SHA.fullmatch(base)):
+            raise SummaryError("Candidate PR missing exact commit identity")
+        tests = record.get("pytest")
+        if not isinstance(tests, dict):
+            raise SummaryError("Candidate PR missing pytest receipt")
+        status = clean_status(tests.get("status"), "Candidate pytest state")
+        if status in ("NOT_DISPATCHED", "BASE_CHANGED_RETEST_REQUIRED"):
+            candidates.append({"number": number, "sha": head.lower(),
+                               "base_sha": base.lower(), "pytest_state": status})
+    if incomplete:
+        return {"status": "COLLECTION_INCOMPLETE", "candidate": None, "count": 0}
+    if not candidates:
+        return {"status": "NO_UNCLAIMED_REVISION", "candidate": None, "count": 0}
+    ordered = sorted(candidates, key=lambda item: item["number"])
+    return {"status": "ADVISORY_CANDIDATE_ONLY", "candidate": ordered[0],
+            "count": len(ordered)}
+
+
 def render(report):
     """Return a sanitized read-only status table, never a test-pass attestation."""
     if not isinstance(report, dict) or report.get("mode") != "read_only" or report.get("source") != SOURCE:
@@ -80,6 +126,21 @@ def render(report):
         lines.append(f"| [#{number}](https://github.com/{SOURCE}/pull/{number}) | `{head[:8]}` / `{base[:8]}` | {test_status} | {review_status} | {attention} |")
     if not records:
         lines.append("| — | — | No eligible PRs | — | — |")
+    selection = next_test_candidate(records)
+    lines.extend(["", "### Next potential pytest revision (advisory, no writes)", ""])
+    if selection["status"] == "COLLECTION_INCOMPLETE":
+        lines.append("**BLOCKED:** One or more PR metadata collections failed; no candidate is recommended.")
+    elif selection["status"] == "NO_UNCLAIMED_REVISION":
+        lines.append("No eligible PR has a confirmed new, unclaimed test revision.")
+    else:
+        chosen = selection["candidate"]
+        lines.append(
+            f"Potential next PR [#{chosen['number']}](https://github.com/{SOURCE}/pull/{chosen['number']}): "
+            f"head `{chosen['sha']}`, base `{chosen['base_sha']}`; "
+            f"receipt state `{chosen['pytest_state']}`. "
+            f"{selection['count']} candidate(s) were found; only the lowest PR number is shown."
+        )
+        lines.append("**Not a dispatch authorization.** Re-fetch the full live PR, verify eligibility/head/base and durable claims, and use the separately approved controller write gate before any pytest workflow request.")
     lines.append("")
     lines.append("A successful monitor job means collection/rendering completed, **not** that each PR passed tests or review. A read-only status with unknown findings requires source/review investigation.")
     return "\n".join(lines) + "\n"
