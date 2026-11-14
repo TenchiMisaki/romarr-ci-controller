@@ -134,20 +134,26 @@ def discover(api):
 
 
 def claim_name(pr):
-    # This immutable key intentionally excludes the base SHA. A base change
-    # without a head change needs independent review-status handling in Stage 2C.
+    """Version-2 immutable identity: source PR number, head AND base commit."""
+    return f"romarr-ci-v2/pr-{pr['number']}-h-{pr['sha']}-b-{pr['base_sha']}"
+
+
+def legacy_claim_name(pr):
+    """Keep the accepted v1 ledger; do not silently reinterpret its unknown base."""
     return f"romarr-ci-v1/pr-{pr['number']}-{pr['sha']}"
 
 
-def claim_path(pr):
-    return f"repos/{CONTROLLER}/git/ref/tags/{claim_name(pr)}"
+def claim_path(pr, *, legacy=False):
+    name = legacy_claim_name(pr) if legacy else claim_name(pr)
+    return f"repos/{CONTROLLER}/git/ref/tags/{name}"
 
 
-def claim_exists(api, pr):
-    ref = api.request("GET", claim_path(pr), allow_missing=True)
+def claim_exists(api, pr, *, legacy=False):
+    name = legacy_claim_name(pr) if legacy else claim_name(pr)
+    ref = api.request("GET", claim_path(pr, legacy=legacy), allow_missing=True)
     if ref is None:
         return False
-    if not isinstance(ref, dict) or ref.get("ref") != "refs/tags/" + claim_name(pr):
+    if not isinstance(ref, dict) or ref.get("ref") != "refs/tags/" + name:
         raise WatchError("Claim ref identity mismatch")
     obj = ref.get("object") or {}
     if obj.get("type") != "commit" or not SHA.fullmatch(str(obj.get("sha", ""))):
@@ -181,6 +187,9 @@ def dispatch_one(api, pr, controller_sha):
     """Claim first, dispatch once, record run ID as a second durable tag."""
     if claim_exists(api, pr):
         return {"number": pr["number"], "sha": pr["sha"], "status": "ALREADY_CLAIMED"}
+    if claim_exists(api, pr, legacy=True):
+        return {"number": pr["number"], "sha": pr["sha"],
+                "status": "LEGACY_CLAIM_RECONCILE"}
     verify_fresh(api, pr)
     claim = "refs/tags/" + claim_name(pr)
     try:
@@ -193,12 +202,12 @@ def dispatch_one(api, pr, controller_sha):
         raise WatchError(f"Claim creation inconclusive: {exc}") from None
     if not isinstance(ref, dict) or ref.get("ref") != claim:
         raise WatchError("Claim response cannot be verified; dispatch withheld")
-    # The accepted Stage 1 workflow has a full-head SHA input and will refuse a
-    # different head. It does not have a base-SHA input; this remains a gate for
-    # strong exact-diff attribution, documented in the validation notes.
+    # The additive Stage 1 base input fails closed if the PR base moves before
+    # source resolution. This tests the pinned HEAD, not a synthetic merge commit.
     payload = {"ref": "main", "return_run_details": True,
                "inputs": {"target": "pull_request", "pr_number": str(pr["number"]),
-                          "expected_sha": pr["sha"], "scope": "full"}}
+                          "expected_sha": pr["sha"], "expected_base_sha": pr["base_sha"],
+                          "scope": "full"}}
     run = api.request("POST", f"repos/{CONTROLLER}/actions/workflows/{WORKFLOW}/dispatches", payload)
     if not isinstance(run, dict) or not isinstance(run.get("workflow_run_id"), int) or run["workflow_run_id"] < 1:
         raise WatchError("Dispatch response has no verified run ID; claim retained; manual reconciliation required")
@@ -230,11 +239,17 @@ def run(mode, api, environ):
         for pr in candidates:
             try:
                 prior = claim_exists(api, pr)
+                legacy = claim_exists(api, pr, legacy=True) if not prior else False
                 if mode == "audit":
                     outcome = {"number": pr["number"], "sha": pr["sha"],
-                               "status": "ALREADY_CLAIMED" if prior else "UNCLAIMED"}
+                               "base_sha": pr["base_sha"],
+                               "status": ("ALREADY_CLAIMED" if prior else
+                                          "LEGACY_CLAIM_RECONCILE" if legacy else "UNCLAIMED")}
                 elif prior:
                     outcome = {"number": pr["number"], "sha": pr["sha"], "status": "ALREADY_CLAIMED"}
+                elif legacy:
+                    outcome = {"number": pr["number"], "sha": pr["sha"],
+                               "status": "LEGACY_CLAIM_RECONCILE"}
                 elif len([z for z in report["results"] if z["status"] == "DISPATCHED"]) >= MAX_DISPATCHES:
                     outcome = {"number": pr["number"], "sha": pr["sha"], "status": "DEFERRED_RATE_BOUND"}
                 else:
