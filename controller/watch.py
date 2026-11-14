@@ -8,6 +8,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+from pathlib import Path
 import re
 import sys
 import time
@@ -143,6 +144,48 @@ def legacy_claim_name(pr):
     return f"romarr-ci-v1/pr-{pr['number']}-{pr['sha']}"
 
 
+def legacy_attestation(pr):
+    """Read a reviewed, immutable receipt; never infer a v1 tag's unknown base."""
+    path = Path(__file__).with_name("legacy_receipts.json")
+    try:
+        evidence = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise WatchError("Legacy receipt collection failed: " + type(error).__name__) from None
+    if (not isinstance(evidence, dict) or
+        evidence.get("schema") != "romarr-ci-legacy-receipts-v1" or
+        evidence.get("source_repository") != SOURCE or
+        evidence.get("controller_repository") != CONTROLLER):
+        raise WatchError("Legacy receipt source identity mismatch")
+    items = evidence.get("records")
+    if not isinstance(items, list) or len(items) > 100:
+        raise WatchError("Invalid legacy receipt count")
+    matches = [r for r in items if isinstance(r, dict) and
+               r.get("pr_number") == pr["number"] and r.get("head_sha") == pr["sha"]]
+    if len(matches) > 1:
+        raise WatchError("Conflicting legacy base attestations")
+    if not matches:
+        return None
+    record = matches[0]
+    if (not isinstance(record.get("base_sha"), str) or
+        not SHA.fullmatch(record["base_sha"]) or
+        not isinstance(record.get("controller_sha"), str) or
+        not SHA.fullmatch(record["controller_sha"]) or
+        not isinstance(record.get("archive_sha256"), str) or
+        not re.fullmatch(r"[0-9a-f]{64}", record["archive_sha256"]) or
+        not isinstance(record.get("summary_sha256"), str) or
+        not re.fullmatch(r"[0-9a-f]{64}", record["summary_sha256"]) or
+        isinstance(record.get("run_id"), bool) or
+        not isinstance(record.get("run_id"), int) or record["run_id"] < 1 or
+        isinstance(record.get("artifact_id"), bool) or
+        not isinstance(record.get("artifact_id"), int) or record["artifact_id"] < 1 or
+        record.get("source_postcheck") != "UNCHANGED" or
+        record.get("pytest") != "PASS" or record.get("collection") != "PASS" or
+        record.get("run_url") !=
+            f"https://github.com/{CONTROLLER}/actions/runs/{record['run_id']}"):
+        raise WatchError("Legacy receipt not an exact verified base/head/run record")
+    return record
+
+
 def claim_path(pr, *, legacy=False):
     name = legacy_claim_name(pr) if legacy else claim_name(pr)
     return f"repos/{CONTROLLER}/git/ref/tags/{name}"
@@ -188,8 +231,14 @@ def dispatch_one(api, pr, controller_sha):
     if claim_exists(api, pr):
         return {"number": pr["number"], "sha": pr["sha"], "status": "ALREADY_CLAIMED"}
     if claim_exists(api, pr, legacy=True):
-        return {"number": pr["number"], "sha": pr["sha"],
-                "status": "LEGACY_CLAIM_RECONCILE"}
+        receipt = legacy_attestation(pr)
+        if receipt is None:
+            return {"number": pr["number"], "sha": pr["sha"],
+                    "status": "LEGACY_CLAIM_RECONCILE"}
+        if receipt["base_sha"] == pr["base_sha"]:
+            return {"number": pr["number"], "sha": pr["sha"],
+                    "status": "LEGACY_BASE_ATTESTED"}
+        # A base-only change is new work: v2 claim safely pins the new base.
     verify_fresh(api, pr)
     claim = "refs/tags/" + claim_name(pr)
     try:
@@ -240,16 +289,20 @@ def run(mode, api, environ):
             try:
                 prior = claim_exists(api, pr)
                 legacy = claim_exists(api, pr, legacy=True) if not prior else False
+                receipt = legacy_attestation(pr) if legacy else None
+                legacy_state = ("LEGACY_CLAIM_RECONCILE" if receipt is None else
+                                "LEGACY_BASE_ATTESTED" if receipt["base_sha"] == pr["base_sha"] else
+                                "BASE_CHANGED_RETEST_REQUIRED")
                 if mode == "audit":
                     outcome = {"number": pr["number"], "sha": pr["sha"],
                                "base_sha": pr["base_sha"],
                                "status": ("ALREADY_CLAIMED" if prior else
-                                          "LEGACY_CLAIM_RECONCILE" if legacy else "UNCLAIMED")}
+                                          legacy_state if legacy else "UNCLAIMED")}
                 elif prior:
                     outcome = {"number": pr["number"], "sha": pr["sha"], "status": "ALREADY_CLAIMED"}
-                elif legacy:
+                elif legacy and legacy_state != "BASE_CHANGED_RETEST_REQUIRED":
                     outcome = {"number": pr["number"], "sha": pr["sha"],
-                               "status": "LEGACY_CLAIM_RECONCILE"}
+                               "status": legacy_state}
                 elif len([z for z in report["results"] if z["status"] == "DISPATCHED"]) >= MAX_DISPATCHES:
                     outcome = {"number": pr["number"], "sha": pr["sha"], "status": "DEFERRED_RATE_BOUND"}
                 else:
