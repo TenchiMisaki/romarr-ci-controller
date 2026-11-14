@@ -36,7 +36,10 @@ def pages(api, suffix):
     """Fetch all bounded REST pages; no silently truncated reviews or checks."""
     all_items = []
     for page in range(1, 11):
-        rows = api.request("GET", f"repos/{watch.SOURCE}/{suffix}?per_page=100&page={page}")
+        payload = api.request("GET", f"repos/{watch.SOURCE}/{suffix}?per_page=100&page={page}")
+        # GitHub checks use a wrapped {total_count, check_runs} collection;
+        # pull-request reviews and issue comments are bare arrays.
+        rows = payload.get("check_runs") if suffix.endswith("/check-runs") and isinstance(payload, dict) else payload
         if not isinstance(rows, list):
             raise watch.WatchError("Invalid paginated REST collection")
         all_items.extend(rows)
