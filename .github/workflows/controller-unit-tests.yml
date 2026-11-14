@@ -9,6 +9,8 @@ on:
       - 'tests/**'
       - '.github/workflows/romarr-pr-watch.yml'
       - '.github/workflows/controller-unit-tests.yml'
+      - 'README.md'
+      - 'VALIDATION.md'
 
 permissions:
   contents: read
