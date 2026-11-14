@@ -164,15 +164,33 @@ def pytest_status(api, pr):
         if len(valid) != len(matches) or len(valid) != 1:
             return {"status": "CLAIM_WITHOUT_UNIQUE_RUN", "run_id": None}
         run_id = int(valid[0]["ref"][len(prefix):])
+        tag_obj = valid[0].get("object") or {}
+        if tag_obj.get("type") != "commit" or not watch.SHA.fullmatch(str(tag_obj.get("sha", ""))):
+            raise watch.WatchError("Run-ID ledger tag does not reference a valid controller commit")
         run = api.request("GET", f"repos/{watch.CONTROLLER}/actions/runs/{run_id}")
-        if not isinstance(run, dict) or run.get("id") != run_id or run.get("event") != "workflow_dispatch":
-            raise watch.WatchError("Dispatch run identity differs from ledger")
+        expected_url = f"https://github.com/{watch.CONTROLLER}/actions/runs/{run_id}"
+        if (not isinstance(run, dict) or run.get("id") != run_id or
+            run.get("event") != "workflow_dispatch" or
+            run.get("html_url") != expected_url or
+            run.get("path") != ".github/workflows/romarr-pytest.yml" or
+            run.get("head_sha") != tag_obj["sha"]):
+            raise watch.WatchError("Dispatch run identity/workflow/controller SHA differs from ledger")
         if run.get("status") != "completed":
             status = "IN_PROGRESS" if run.get("status") in ("queued", "in_progress", "waiting") else "UNKNOWN"
         elif run.get("conclusion") != "success":
             status = "WORKFLOW_" + str(run.get("conclusion") or "UNKNOWN").upper()
         else:
-            status = "WORKFLOW_SUCCESS_EVIDENCE_NOT_INDEPENDENTLY_CHECKED"
+            artifacts = api.request("GET", f"repos/{watch.CONTROLLER}/actions/runs/{run_id}/artifacts")
+            items = artifacts.get("artifacts") if isinstance(artifacts, dict) else None
+            if not isinstance(items, list):
+                raise watch.WatchError("Cannot verify expected sanitized artifact metadata")
+            expected = f"romarr-pytest-handoff-{run_id}-"
+            matches = [a for a in items if isinstance(a, dict) and
+                       str(a.get("name", "")).startswith(expected) and
+                       a.get("expired") is False and
+                       isinstance(a.get("size_in_bytes"), int) and a["size_in_bytes"] > 0]
+            status = ("WORKFLOW_SUCCESS_ARTIFACT_PRESENT_CONTENTS_UNVERIFIED"
+                      if len(matches) == 1 else "WORKFLOW_SUCCESS_ARTIFACT_UNVERIFIED")
         return {"status": status, "run_id": run_id}
     return {"status": ("LEGACY_CLAIM_RECONCILE" if watch.claim_exists(api, pr, legacy=True)
                        else "NOT_DISPATCHED"), "run_id": None}
