@@ -64,7 +64,7 @@ def require_sha(value, label):
     return value.lower()
 
 
-def resolve(mode: str, pr: str, expected: str, expected_base: str = "", fetch=github_get):
+def resolve(mode: str, pr: str, expected: str, fetch=github_get, *, expected_base: str = ""):
     if mode not in ("pull_request", "main"):
         raise TargetError("Target mode must be pull_request or main")
     if expected and not SHA.fullmatch(expected):
@@ -165,7 +165,8 @@ def main():
     public = Path(os.environ["RUNNER_TEMP"]) / "romarr-ci-public"
     if sys.argv[1] == "resolve":
         target = resolve(os.environ["INPUT_TARGET"], os.environ.get("INPUT_PR_NUMBER", ""),
-                         os.environ.get("INPUT_EXPECTED_SHA", ""), os.environ.get("INPUT_EXPECTED_BASE_SHA", ""))
+                         os.environ.get("INPUT_EXPECTED_SHA", ""),
+                         expected_base=os.environ.get("INPUT_EXPECTED_BASE_SHA", ""))
         atomic_json(private / "target.json", target)
         output = os.environ.get("GITHUB_OUTPUT")
         if output:
