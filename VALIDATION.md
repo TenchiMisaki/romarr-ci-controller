@@ -1,6 +1,6 @@
 # Validation receipt — controller v01
 
-**Result: PREPARED / OFFLINE TESTS PASS / LIVE GITHUB ACTIONS NOT TESTED.**
+**Current status: ARCHIVE-TOOL-ENABLED FULL BASELINE PASS (November 14, 2026); exact PR workflows and scheduling not yet validated.**
 
 ## Source-derived design checks
 
@@ -17,13 +17,21 @@
 - Additional live **local** pytest 9.0.2 JUnit fixture with one pass and one expected skip: raw process exit 0, exact individual JUnit counts reconstructed **PASS**. It is a collector proof, not a ROMarr full-suite test.
 - YAML parsed using PyYAML 6.0.3; confirmed one `workflow_dispatch` trigger, no schedule/push/PR triggers, `ubuntu-24.04`, read-only `contents` permission and six full-SHA action references. Static workflow inspection **PASS**.
 
-## Not performed
+## Not performed during original package preparation (historical)
 
 - GitHub-native `actionlint` execution **NOT TESTED** (not installed in the package preparation environment).
 - GitHub-hosted workflow execution, Python package installation against ROMarr's actual dependency tree, PR #25/#21 full pytest, Node-dependent ROMarr regression execution and external source checkout **NOT TESTED**.
 - Scheduled detection, CodeRabbit monitor, persistent deduplication and automated code correction **NOT INSTALLED**.
 - An artifact upload to the actual GitHub controller and GitHub run/readback are **NOT TESTED**.
 
+## GitHub-hosted acceptance — November 14, 2026 (UTC)
+
+- Controller revision `617e1ac98d8816432277622f252d8b072339439a`, [initial successful baseline #43628828155](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43628828155): ROMarr source `3aeede0ff0e3b9ad0b305d6e4baaaa1252bb0176`, 3,814 passed / 19 skipped / no failures/errors; source verification UNCHANGED; sanitized evidence and final gate PASS.
+- Controller revision `0bfc16d3294ca73570c407fc69c73c5743fc8a67`, [archive-tools-enabled baseline #43629839935](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43629839935): **3,831 passed / 2 skipped / no failures/errors** from 3,833 cases, raw pytest exit `0`, Python 3.13.18, Node.js 24.22.2; `TEST=PASS`, `COLLECTION=PASS`, `SOURCE=UNCHANGED`, and final GitHub workflow SUCCESS.
+- Runner installed missing Ubuntu `libarchive-tools` and `unar` and positively found all required executables (`bsdtar`, `7z`, `unar`, `lsar`). ROMarr's `bsdtar_path()` and `rar_tool()` checks passed, selecting `7z` as the split-RAR reader. The action does not install tools on CT107 or production.
+- Downloaded public artifact `romarr-pytest-handoff-43629839935-1` (`12,396` bytes), exact ZIP SHA-256 `20d897b4380187f2c36f4dbb3a66b5e02a228dcd9b776d157572c7c0089c61bf` matched the GitHub job log. ZIP CRC, all four manifest file hashes, `summary.json`, `postcheck.json`, and **3,833 anonymous individual outcomes** independently reconciled. Raw private JUnit/log contents were intentionally not published.
+- The 17-case reduction in skipped tests between baselines is **observed**, but the public anonymous evidence alone does not determine which tests changed skip status. This confirms full **offline-marked source pytest** for the pinned main revision, not network-marked, Docker/browser, deployed operation, code review, a PR head, or an unattended schedule.
+
 ## Scope and recovery
 
-These are reproducible **offline code and parser** results, not proof of a live CI PASS. First publish the controller to its separate repository and run the manual `main` baseline; inspect the actual Actions job, artifact members, SHA attribution, case counts, and unexpected skips before testing any PR head or enabling scheduling. If a failure occurs, preserve the run evidence and original source; do not modify the ROMarr fork or private synchronization automation to compensate.
+The full **main** baseline is now live-accepted for the stated source and controller revisions. Before treating any ROMarr PR as validated, run the manual PR-specific workflow on its own exact current head, examine all skips and independent artifact outcomes, and apply the separate CodeRabbit/review gates. Do not enable scheduling until independently reviewed and accepted. If a failure occurs, preserve the run evidence and original source; do not modify the ROMarr fork or private synchronization automation to compensate.
