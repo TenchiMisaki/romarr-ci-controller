@@ -77,7 +77,7 @@ def render(report):
                      findings == "UNKNOWN_OR_ACTIONABLE" else
                      "Verify review" if review_status != "REVIEW_READY" else
                      "None from metadata")
-        lines.append(f"| [#{number}](https://github.com/{SOURCE}/pull/{number}) | \`{head[:8]}\` / \`{base[:8]}\` | {test_status} | {review_status} | {attention} |")
+        lines.append(f"| [#{number}](https://github.com/{SOURCE}/pull/{number}) | `{head[:8]}` / `{base[:8]}` | {test_status} | {review_status} | {attention} |")
     if not records:
         lines.append("| — | — | No eligible PRs | — | — |")
     lines.append("")
