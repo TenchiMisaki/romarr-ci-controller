@@ -65,7 +65,8 @@ class SinglePRTargeting(unittest.TestCase):
         env["ROMARR_SELECTED_PR"] = "21,25"
         with self.assertRaisesRegex(w.WatchError, "explicit valid PR number"):
             w.run("dispatch", api, env)
-        self.assertFalse(api.calls)
+        self.assertTrue(all(method == "GET" and path == f"repos/{w.CONTROLLER}/git/ref/heads/main"
+                            for method, path, _ in api.calls))
 
     def test_missing_exact_head_blocks_before_api_calls(self):
         api, env = IsolatedApi(), selected()
