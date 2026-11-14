@@ -142,7 +142,9 @@ class Dispatch(unittest.TestCase):
     def setUp(self):
         self.c = w.classify(pr())[0]
         self.env = {"GITHUB_REPOSITORY": w.CONTROLLER, "GITHUB_ACTIONS": "true",
-                    "RUNNER_OS": "Linux", "ROMARR_WATCH_DISPATCH": "YES", "GITHUB_SHA": C}
+                    "RUNNER_OS": "Linux", "ROMARR_WATCH_DISPATCH": "YES", "GITHUB_SHA": C,
+                     "ROMARR_SELECTED_PR": "25", "ROMARR_SELECTED_HEAD_SHA": H,
+                     "ROMARR_SELECTED_BASE_SHA": B}
 
     def test_wrong_target_blocks(self):
         env = dict(self.env, GITHUB_REPOSITORY="BlizzHacker/romarr")
@@ -196,7 +198,10 @@ class Dispatch(unittest.TestCase):
         self.assertEqual(receipt["base_sha"], candidate["base_sha"])
         self.assertEqual(receipt["run_id"], 43642752510)
         s = Stub(p=historic, legacy_only=True)
-        result = w.run("dispatch", s, self.env)
+        target_env = dict(self.env, ROMARR_SELECTED_PR="21",
+                          ROMARR_SELECTED_HEAD_SHA=historic["head"]["sha"],
+                          ROMARR_SELECTED_BASE_SHA=historic["base"]["sha"])
+        result = w.run("dispatch", s, target_env)
         self.assertEqual(result["results"][0]["status"], "LEGACY_BASE_ATTESTED")
         self.assertEqual(result["results"][0]["base_sha"], receipt["base_sha"])
         self.assertFalse(any(method == "POST" for method, path, body in s.calls))
@@ -205,7 +210,10 @@ class Dispatch(unittest.TestCase):
         historic = pr(number=21, head="74196f657d0e98928d495ce54c7a8b219ff49f3a",
                       base="d" * 40)
         s = Stub(p=historic, legacy_only=True)
-        outcome = w.run("dispatch", s, self.env)
+        target_env = dict(self.env, ROMARR_SELECTED_PR="21",
+                          ROMARR_SELECTED_HEAD_SHA=historic["head"]["sha"],
+                          ROMARR_SELECTED_BASE_SHA=historic["base"]["sha"])
+        outcome = w.run("dispatch", s, target_env)
         self.assertEqual(outcome["results"][0]["status"], "DISPATCHED")
         self.assertEqual(outcome["results"][0]["base_sha"], "d" * 40)
         posts = [body for method, path, body in s.calls if method == "POST"]
