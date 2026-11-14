@@ -17,13 +17,14 @@ COVERED = ('<!-- final_review_risk_coverage:{"sourceCommitId":"' + H +
 
 class ReadAPI:
     def __init__(self, *, claimed=False, legacy=False, ledger=None, run=None,
-                 checks=None, comments=None):
+                 checks=None, comments=None, artifacts=None):
         self.claimed = claimed
         self.legacy = legacy
         self.ledger = ledger if ledger is not None else []
         self.run = run or {}
         self.checks = checks if checks is not None else []
         self.comments = comments if comments is not None else []
+        self.artifacts = artifacts if artifacts is not None else []
         self.calls = []
 
     def request(self, method, path, body=None, allow_missing=False):
@@ -38,6 +39,8 @@ class ReadAPI:
                      "object": {"sha": C, "type": "commit"}} if self.legacy else None)
         if "/git/matching-refs/tags/" in path:
             return self.ledger
+        if "/actions/runs/" in path and path.endswith("/artifacts"):
+            return {"artifacts": self.artifacts}
         if "/actions/runs/" in path:
             return self.run
         if "/check-runs?" in path:
@@ -144,11 +147,42 @@ class Receipts(unittest.TestCase):
     def test_exact_run_success_is_metadata_only(self):
         run_id = 123
         tag = "refs/tags/" + s.watch.claim_name(P) + "-run-" + str(run_id)
-        api = ReadAPI(claimed=True, ledger=[{"ref": tag}],
-                      run={"id": run_id, "event": "workflow_dispatch",
-                           "status": "completed", "conclusion": "success"})
+        api = ReadAPI(claimed=True, ledger=[{"ref": tag, "object": {"type": "commit", "sha": C}}],
+                      run={"id": run_id, "event": "workflow_dispatch", "head_sha": C,
+                           "path": ".github/workflows/romarr-pytest.yml",
+                           "html_url": "https://github.com/" + s.watch.CONTROLLER + "/actions/runs/123",
+                           "status": "completed", "conclusion": "success"},
+                      artifacts=[{"name": "romarr-pytest-handoff-123-1",
+                                  "expired": False, "size_in_bytes": 12049}])
         self.assertEqual(s.pytest_status(api, P)["status"],
-                         "WORKFLOW_SUCCESS_EVIDENCE_NOT_INDEPENDENTLY_CHECKED")
+                         "WORKFLOW_SUCCESS_ARTIFACT_PRESENT_CONTENTS_UNVERIFIED")
+
+
+    def test_run_ledger_with_untrusted_controller_sha_blocks(self):
+        run_id = 123
+        tag = "refs/tags/" + s.watch.claim_name(P) + "-run-" + str(run_id)
+        api = ReadAPI(claimed=True, ledger=[{"ref": tag, "object": {"type": "commit", "sha": C}}],
+                      run={"id": run_id, "event": "workflow_dispatch", "head_sha": H,
+                           "path": ".github/workflows/romarr-pytest.yml",
+                           "html_url": "https://github.com/" + s.watch.CONTROLLER + "/actions/runs/123",
+                           "status": "completed", "conclusion": "success"})
+        with self.assertRaisesRegex(s.watch.WatchError, "identity/workflow/controller SHA"):
+            s.pytest_status(api, P)
+
+    def test_run_ledger_missing_commit_metadata_blocks(self):
+        api = ReadAPI(claimed=True, ledger=[{"ref": "refs/tags/" + s.watch.claim_name(P) + "-run-123"}])
+        with self.assertRaisesRegex(s.watch.WatchError, "valid controller commit"):
+            s.pytest_status(api, P)
+
+    def test_success_without_artifact_is_not_verified(self):
+        api = ReadAPI(claimed=True,
+                      ledger=[{"ref": "refs/tags/" + s.watch.claim_name(P) + "-run-123",
+                               "object": {"type": "commit", "sha": C}}],
+                      run={"id": 123, "event": "workflow_dispatch", "head_sha": C,
+                           "path": ".github/workflows/romarr-pytest.yml",
+                           "html_url": "https://github.com/" + s.watch.CONTROLLER + "/actions/runs/123",
+                           "status": "completed", "conclusion": "success"})
+        self.assertEqual(s.pytest_status(api, P)["status"], "WORKFLOW_SUCCESS_ARTIFACT_UNVERIFIED")
 
     def test_duplicate_run_tags_fail_closed(self):
         prefix = "refs/tags/" + s.watch.claim_name(P) + "-run-"
@@ -158,8 +192,12 @@ class Receipts(unittest.TestCase):
 
     def test_running_job_not_pass(self):
         api = ReadAPI(claimed=True,
-                      ledger=[{"ref": "refs/tags/" + s.watch.claim_name(P) + "-run-123"}],
-                      run={"id": 123, "event": "workflow_dispatch", "status": "in_progress"})
+                      ledger=[{"ref": "refs/tags/" + s.watch.claim_name(P) + "-run-123",
+                               "object": {"type": "commit", "sha": C}}],
+                      run={"id": 123, "event": "workflow_dispatch", "head_sha": C,
+                           "path": ".github/workflows/romarr-pytest.yml",
+                           "html_url": "https://github.com/" + s.watch.CONTROLLER + "/actions/runs/123",
+                           "status": "in_progress"})
         self.assertEqual(s.pytest_status(api, P)["status"], "IN_PROGRESS")
 
 
