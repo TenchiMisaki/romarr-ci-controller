@@ -98,12 +98,13 @@ class Discovery(unittest.TestCase):
         with self.assertRaises(w.WatchError):
             w.classify(p)
 
-    def test_non_main_base_is_not_eligible(self):
-        p = pr()
-        p["base"]["ref"] = "feature/other-work"
+    def test_stacked_feature_base_is_eligible(self):
+        p = pr(number=21)
+        p["base"]["ref"] = "feature/system-update-ui-parity-pr4"
         candidate, reason = w.classify(p)
-        self.assertIsNone(candidate)
-        self.assertEqual(reason, "non_main_base")
+        self.assertEqual(reason, "eligible")
+        self.assertEqual(candidate["number"], 21)
+        self.assertEqual(candidate["base_ref"], "feature/system-update-ui-parity-pr4")
 
     def test_pagination_and_sorted(self):
         s = Stub()
