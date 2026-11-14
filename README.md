@@ -1,6 +1,6 @@
 # ROMarr GitHub pytest controller — manual pilot v01
 
-**Status: PREPARED / NOT INSTALLED / NO GITHUB-HOSTED TEST EXECUTED.**
+**Status: PUBLISHED TO GITHUB / MANUAL WORKFLOW READY / GITHUB-HOSTED TEST NOT YET EXECUTED.**
 
 This is a separate **public** GitHub repository to host ROMarr test orchestration. It does **not** modify `TenchiMisaki/romarr`, `BlizzHacker/romarr`, any separate fork-sync automation, any private infrastructure, or production Docker services. No workflow schedules, deployments, image publication, or PR-writing permissions are included in v01.
 
@@ -10,7 +10,7 @@ The personal ROMarr fork's `main` is maintained by a guarded **fast-forward-only
 
 ## Prerequisites and source of truth
 
-- Create **public** GitHub repository `TenchiMisaki/romarr-ci-controller`, initialize it with a README to establish its `main` branch, and do not add Actions secrets or additional workflows. The verified package README will replace that initial placeholder during publication. Once the repository exists and the GitHub connection has access, the staged files can be published and read back.
+- The **public** `TenchiMisaki/romarr-ci-controller` repository is initialized and its six v01 source files were published to `main` at commit `a1134a2bd29e2163eae52929d6f1c4459982db28` (November 14, 2026). Their Git blob hashes were independently read back and matched the original v01 ZIP. Do not add Actions secrets or additional workflows without a separate review.
 - GitHub Actions must be enabled. Stage 1 has **only** `workflow_dispatch`; it does not auto-run on pushes or a timer.
 - Official ROMarr `main` `AGENTS.md`, `pytest.ini`, `.github/workflows/docker.yml`, and `.coderabbit.yaml` remain the authoritative external project conventions. The controller doesn't change those files.
 - Proven external CI dependencies: `rom-hub` Git commit `02e9a1dbc7ebca5191b4a977233a4d6d0466ed4b` and Archive.org fixture repo tag `v0.4.1`, resolved to `3b49c1c67ccedfc5f072c19e3dd4990fec0b0d5f`. GitHub action dependencies are pinned by complete reviewed tag SHAs.
