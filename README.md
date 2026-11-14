@@ -1,6 +1,6 @@
 # ROMarr GitHub pytest controller — manual pilot v01
 
-**Status: PUBLISHED TO GITHUB / MANUAL WORKFLOW READY / GITHUB-HOSTED TEST NOT YET EXECUTED.**
+**Status: INITIAL GITHUB-HOSTED FULL PYTEST BASELINE ACCEPTED / ARCHIVE-TOOL PREREQUISITE CHECK PUBLISHED BUT NOT YET LIVE-TESTED.**
 
 This is a separate **public** GitHub repository to host ROMarr test orchestration. It does **not** modify `TenchiMisaki/romarr`, `BlizzHacker/romarr`, any separate fork-sync automation, any private infrastructure, or production Docker services. No workflow schedules, deployments, image publication, or PR-writing permissions are included in v01.
 
@@ -15,11 +15,11 @@ The personal ROMarr fork's `main` is maintained by a guarded **fast-forward-only
 - Official ROMarr `main` `AGENTS.md`, `pytest.ini`, `.github/workflows/docker.yml`, and `.coderabbit.yaml` remain the authoritative external project conventions. The controller doesn't change those files.
 - Proven external CI dependencies: `rom-hub` Git commit `02e9a1dbc7ebca5191b4a977233a4d6d0466ed4b` and Archive.org fixture repo tag `v0.4.1`, resolved to `3b49c1c67ccedfc5f072c19e3dd4990fec0b0d5f`. GitHub action dependencies are pinned by complete reviewed tag SHAs.
 
-## First execution, only after publishing to its own `main`
+## Manual execution
 
-Open the controller repository → **Actions** → **ROMarr pytest - Manual CI pilot** → **Run workflow**. For the **first** baseline check, select `target=main`, `scope=full`, leave `expected_sha` blank (the runner pins the identical upstream/fork `main` commit during preflight). `pr_number` is ignored for main.
+Open the controller repository → **Actions** → **ROMarr pytest - Manual CI pilot** → **Run workflow**. To retest the baseline, select `target=main`, `scope=full`, leave `expected_sha` blank (the runner pins identical upstream/fork `main` during preflight); `pr_number` is ignored for main. The initial baseline was accepted on November 14, 2026, before archive prerequisites were added.
 
-Once that run actually passes and its evidence integrity is checked, select `target=pull_request`, `pr_number=25`, `scope=full`, and leave `expected_sha` blank or supply the **currently verified** complete 40-hex head. Repeat separately for PR #21 as appropriate. Each run fetches exact metadata, checks out the immutable SHA, runs pytest, and independently rechecks live heads and source status. A changed head/base results in `STALE_OR_UNVERIFIED`, not a false current-head PASS.
+After the updated archive-tool prerequisite check passes on a fresh baseline run and its evidence integrity is checked, select `target=pull_request`, `pr_number=25`, `scope=full`, and leave `expected_sha` blank or supply the **currently verified** complete 40-hex head. Repeat separately for PR #21 as appropriate. Each run fetches exact metadata, checks out the immutable SHA, runs pytest, and independently rechecks live heads and source status. A changed head/base results in `STALE_OR_UNVERIFIED`, not a false current-head PASS.
 
 ## Evidence and safety
 
@@ -45,4 +45,4 @@ Remove or disable the workflow **only in the standalone controller repo** to sto
 
 ## Validation status
 
-The packaged scripts are verified only to the extent documented with the delivery receipt. Live GitHub runner execution, upstream dependency installation, exact PR tests, full CI acceptance, scheduling, CodeRabbit monitoring and ChatGPT handoff retrieval remain **NOT TESTED** until demonstrated from an actual published controller run.
+The original manual full baseline [run #43628828155](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43628828155) is **PASS** at ROMarr source `3aeede0ff0e3b9ad0b305d6e4baaaa1252bb0176`: 3,814 passed, 19 skipped, 0 failed/errors, pytest exit 0, JUnit collection PASS, source postcheck UNCHANGED, final workflow success. The five-file public artifact `romarr-pytest-handoff-43628828155-1` was downloaded, CRC-checked, and its source/counts reviewed. These are **source tests only**, not Docker, browser or production acceptance. The new archive-tools workflow revision [`9d39264`](https://github.com/TenchiMisaki/romarr-ci-controller/commit/9d3926424674e7a06c19cfa54a7431999820ddfc) adds fail-closed checks and installs missing Ubuntu `libarchive-tools`, `7zip`, and `unar` packages; this updated step passed offline YAML and Bash syntax validation but its **GitHub-hosted execution is NOT TESTED**. Exact PR #25/#21 source tests, unattended scheduling and CodeRabbit monitoring are also NOT TESTED.
