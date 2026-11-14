@@ -104,5 +104,98 @@ class Render(unittest.TestCase):
                     m.render(report(excluded=value))
 
 
+
+class AdvisoryNextTest(unittest.TestCase):
+    """A proposed revision must never imply approval or duplicate a receipt."""
+
+    def test_no_new_source_when_pr21_has_valid_v1_receipt(self):
+        decision = m.next_test_candidate([record()])
+        self.assertEqual(decision["status"], "NO_UNCLAIMED_REVISION")
+        self.assertIsNone(decision["candidate"])
+        self.assertIn("No eligible PR", m.render(report([record()])))
+
+    def test_one_new_pr_selects_full_sha_and_base(self):
+        ready = record(number=29)
+        ready["pytest"] = {"status": "NOT_DISPATCHED"}
+        decision = m.next_test_candidate([ready])
+        self.assertEqual(decision["status"], "ADVISORY_CANDIDATE_ONLY")
+        self.assertEqual(decision["candidate"]["number"], 29)
+        self.assertEqual(decision["candidate"]["sha"], "a" * 40)
+        self.assertEqual(decision["candidate"]["base_sha"], "b" * 40)
+        summary = m.render(report([ready]))
+        self.assertIn("advisory, no writes", summary)
+        self.assertIn("Not a dispatch authorization", summary)
+
+    def test_base_only_change_is_potential_new_revision(self):
+        changed = record()
+        changed["pytest"] = {"status": "BASE_CHANGED_RETEST_REQUIRED"}
+        self.assertEqual(m.next_test_candidate([changed])["candidate"]["number"], 21)
+
+    def test_duplicate_candidate_chooses_lowest_number(self):
+        late, early = record(number=31), record(number=30)
+        late["pytest"] = {"status": "NOT_DISPATCHED"}
+        early["pytest"] = {"status": "NOT_DISPATCHED"}
+        decision = m.next_test_candidate([late, early])
+        self.assertEqual(decision["count"], 2)
+        self.assertEqual(decision["candidate"]["number"], 30)
+
+    def test_unknown_legacy_receipt_does_not_retest(self):
+        candidate = record()
+        candidate["pytest"] = {"status": "LEGACY_CLAIM_RECONCILE"}
+        self.assertEqual(m.next_test_candidate([candidate])["status"], "NO_UNCLAIMED_REVISION")
+
+    def test_existing_v2_claim_without_run_never_retries(self):
+        candidate = record()
+        candidate["pytest"] = {"status": "CLAIM_WITHOUT_UNIQUE_RUN"}
+        self.assertIsNone(m.next_test_candidate([candidate])["candidate"])
+
+    def test_workflow_failure_does_not_auto_retry(self):
+        candidate = record()
+        candidate["pytest"] = {"status": "WORKFLOW_FAILURE"}
+        self.assertEqual(m.next_test_candidate([candidate])["status"], "NO_UNCLAIMED_REVISION")
+
+    def test_collection_failure_suppresses_other_ready_candidates(self):
+        fresh = record(number=25)
+        fresh["pytest"] = {"status": "NOT_DISPATCHED"}
+        broken = {"number": 24, "status": "COLLECTION_FAILED",
+                  "reason": "untrusted collector detail"}
+        decision = m.next_test_candidate([fresh, broken])
+        self.assertEqual(decision["status"], "COLLECTION_INCOMPLETE")
+        self.assertIsNone(decision["candidate"])
+        rendered = m.render(report([fresh, broken]))
+        self.assertIn("no candidate is recommended", rendered)
+        self.assertNotIn("Potential next PR", rendered)
+        self.assertNotIn("untrusted collector detail", rendered)
+
+    def test_missing_head_on_ready_candidate_fails_closed(self):
+        fresh = record()
+        fresh["pytest"] = {"status": "NOT_DISPATCHED"}
+        fresh["sha"] = "abc"
+        with self.assertRaises(m.SummaryError):
+            m.next_test_candidate([fresh])
+
+    def test_duplicate_pr_numbers_refused_even_with_collection_failure(self):
+        fresh = record()
+        fresh["pytest"] = {"status": "NOT_DISPATCHED"}
+        broken = {"number": 21, "status": "COLLECTION_FAILED"}
+        with self.assertRaises(m.SummaryError):
+            m.next_test_candidate([fresh, broken])
+
+    def test_status_injection_is_refused(self):
+        fresh = record()
+        fresh["pytest"] = {"status": "NOT_DISPATCHED|unsafe"}
+        with self.assertRaises(m.SummaryError):
+            m.next_test_candidate([fresh])
+
+    def test_zero_or_bool_number_refused(self):
+        for bad in (0, True):
+            fresh = record()
+            fresh["number"] = bad
+            with self.subTest(value=bad), self.assertRaises(m.SummaryError):
+                m.next_test_candidate([fresh])
+
+
+
+
 if __name__ == "__main__":
     unittest.main()
