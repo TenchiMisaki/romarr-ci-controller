@@ -22,6 +22,10 @@ jobs:
     steps:
       - name: Checkout controller PR merge result
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
         with:
           persist-credentials: false
       - name: Set up Python 3.13
@@ -34,6 +38,13 @@ jobs:
         run: python -m compileall -q controller tests
       - name: Run offline controller regression suite
         run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Smoke-test Node.js 24 artifact action with public README only
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0, Node.js 24
+        with:
+          name: controller-public-artifact-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: README.md
+          if-no-files-found: error
+          retention-days: 1
       - name: Audit live ROMarr PRs (read-only; no dispatch)
         env:
           GH_TOKEN: ${{ github.token }}
