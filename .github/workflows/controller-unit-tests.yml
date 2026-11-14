@@ -8,6 +8,7 @@ on:
       - 'controller/**'
       - 'tests/**'
       - '.github/workflows/romarr-pr-watch.yml'
+      - '.github/workflows/romarr-pr-monitor.yml'
       - '.github/workflows/controller-unit-tests.yml'
       - 'README.md'
       - 'VALIDATION.md'

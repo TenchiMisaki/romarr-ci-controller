@@ -10,6 +10,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1] / ".github" / "workflows"
 WORKFLOWS = {
     "romarr-pr-watch.yml": 2,
+    "romarr-pr-monitor.yml": 1,
     "controller-unit-tests.yml": 1,
     "romarr-pytest.yml": 3,
 }
@@ -40,12 +41,28 @@ class WorkflowWarnings(unittest.TestCase):
                 self.assertIn("actions/upload-artifact@" + UPLOAD_SHA, source)
                 self.assertNotIn("actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02", source)
 
-    def test_no_workflow_schedule_or_new_write_authority(self):
-        for name in WORKFLOWS:
+    def test_existing_manual_test_and_dispatch_workflows_remain_unscheduled(self):
+        for name in ("romarr-pr-watch.yml", "controller-unit-tests.yml", "romarr-pytest.yml"):
             source = (ROOT / name).read_text(encoding="utf-8")
             with self.subTest(workflow=name):
                 self.assertNotRegex(source, r"(?m)^\s*schedule:\s*$")
                 self.assertNotRegex(source, r"(?m)^\s*push:\s*$")
+
+
+    def test_scheduled_monitor_is_read_only(self):
+        source = (ROOT / "romarr-pr-monitor.yml").read_text(encoding="utf-8")
+        self.assertIn("  schedule:", source)
+        self.assertIn("cron: '17,47 * * * *'", source)
+        self.assertIn("permissions:\n  contents: read", source)
+        self.assertIn("      contents: read", source)
+        self.assertIn("python controller/watch.py audit", source)
+        self.assertIn("python controller/status.py audit", source)
+        self.assertIn("python controller/monitor_summary.py", source)
+        self.assertNotIn("      actions: write", source)
+        self.assertNotIn("      contents: write", source)
+        self.assertNotIn("ROMARR_WATCH_DISPATCH", source)
+        self.assertNotIn("python controller/watch.py dispatch", source)
+        self.assertNotRegex(source, r"(?m)^\s*push:\s*$")
 
 
 if __name__ == "__main__":
