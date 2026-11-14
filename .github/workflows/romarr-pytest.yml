@@ -20,6 +20,11 @@ on:
         type: string
         default: ''
         required: false
+      expected_base_sha:
+        description: Optional full 40-hex PR base SHA; watcher pins this for base-aware validation
+        type: string
+        default: ''
+        required: false
       scope:
         description: Full offline pytest or fast repository invariants
         type: choice
@@ -31,7 +36,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: romarr-pytest-${{ inputs.target }}-${{ inputs.pr_number }}-${{ inputs.expected_sha || 'resolve-current' }}
+  group: romarr-pytest-${{ inputs.target }}-${{ inputs.pr_number }}-${{ inputs.expected_sha || 'resolve-current' }}-${{ inputs.expected_base_sha || 'resolve-base' }}
   cancel-in-progress: false
 
 jobs:
@@ -61,6 +66,7 @@ jobs:
           INPUT_TARGET: ${{ inputs.target }}
           INPUT_PR_NUMBER: ${{ inputs.pr_number }}
           INPUT_EXPECTED_SHA: ${{ inputs.expected_sha }}
+          INPUT_EXPECTED_BASE_SHA: ${{ inputs.expected_base_sha }}
         run: python controller/controller/target.py resolve
 
       - name: Checkout pinned public ROMarr source (read-only)
