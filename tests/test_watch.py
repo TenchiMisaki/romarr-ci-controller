@@ -214,12 +214,28 @@ class Dispatch(unittest.TestCase):
         s = Stub()
         result = w.run("audit", s, {})
         self.assertEqual(result["results"][0]["status"], "UNCLAIMED")
+        self.assertEqual(result["results"][0]["base_sha"], B)
         self.assertFalse(any(x[0] == "POST" for x in s.calls))
 
     def test_audit_marks_legacy_as_reconciliation(self):
         s = Stub(legacy_only=True)
         result = w.run("audit", s, {})
         self.assertEqual(result["results"][0]["status"], "LEGACY_CLAIM_RECONCILE")
+        self.assertFalse(any(x[0] == "POST" for x in s.calls))
+
+    def test_successful_dispatch_reports_exact_head_and_base(self):
+        s = Stub()
+        result = w.run("dispatch", s, self.env)
+        self.assertEqual(result["results"][0]["status"], "DISPATCHED")
+        self.assertEqual(result["results"][0]["sha"], H)
+        self.assertEqual(result["results"][0]["base_sha"], B)
+        self.assertIn("-b-" + B, w.claim_name(self.c))
+
+    def test_prior_claim_reports_base_without_replay(self):
+        s = Stub(prior=True)
+        result = w.run("dispatch", s, self.env)
+        self.assertEqual(result["results"][0]["status"], "ALREADY_CLAIMED")
+        self.assertEqual(result["results"][0]["base_sha"], B)
         self.assertFalse(any(x[0] == "POST" for x in s.calls))
 
     def test_wrong_command_fails(self):
