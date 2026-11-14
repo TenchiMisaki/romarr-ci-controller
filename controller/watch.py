@@ -22,7 +22,7 @@ WORKFLOW = "romarr-pytest.yml"
 SHA = re.compile(r"[0-9a-fA-F]{40}\Z")
 NUM = re.compile(r"[1-9][0-9]{0,5}\Z")
 MAX_PAGES = 10
-MAX_DISPATCHES = 2
+MAX_DISPATCHES = 1
 
 
 class WatchError(Exception):
@@ -132,6 +132,28 @@ def discover(api):
         if len(items) < 100:
             return sorted(candidates, key=lambda x: x["number"]), exclusions
     raise WatchError("PR pagination exceeded verified 1000-record boundary")
+
+
+def select_exact(api, environ):
+    """Select one explicitly pinned eligible PR without scanning unrelated PRs.
+
+    Dispatch is a privileged operation: absent, malformed or stale user inputs
+    must fail before any claim lookup/write or workflow submission. The caller
+    also revalidates the same PR immediately before claiming its revision.
+    """
+    raw_number = environ.get("ROMARR_SELECTED_PR")
+    if not isinstance(raw_number, str) or not NUM.fullmatch(raw_number):
+        raise WatchError("Dispatch requires one explicit valid PR number")
+    number = int(raw_number)
+    head_sha = exact_sha(environ.get("ROMARR_SELECTED_HEAD_SHA"), "Selected PR head SHA")
+    base_sha = exact_sha(environ.get("ROMARR_SELECTED_BASE_SHA"), "Selected PR base SHA")
+    current = api.request("GET", f"repos/{SOURCE}/pulls/{number}")
+    candidate, reason = classify(current)
+    if reason != "eligible" or candidate is None or candidate["number"] != number:
+        raise WatchError(f"Selected PR is not eligible: {reason}")
+    if candidate["sha"] != head_sha or candidate["base_sha"] != base_sha:
+        raise WatchError("Selected PR head/base SHA changed or does not match")
+    return candidate
 
 
 def claim_name(pr):
@@ -283,7 +305,11 @@ def run(mode, api, environ):
     print(f"Node/guest: GitHub-hosted Ubuntu job only; no Proxmox or private target")
     try:
         controller_sha = verify_controller(api, environ) if mode == "dispatch" else None
-        candidates, excluded = discover(api)
+        if mode == "dispatch":
+            # One exact-target lookup. Never enumerate eligible PRs for a write.
+            candidates, excluded = [select_exact(api, environ)], []
+        else:
+            candidates, excluded = discover(api)
         report = {"mode": mode, "eligible": candidates, "excluded": excluded, "results": []}
         for pr in candidates:
             try:
