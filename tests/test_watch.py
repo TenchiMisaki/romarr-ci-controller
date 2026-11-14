@@ -188,6 +188,37 @@ class Dispatch(unittest.TestCase):
         self.assertEqual(o["status"], "DISPATCHED")
         self.assertIn("-b-" + C, [x[2]["ref"] for x in s.calls if x[1].endswith("/git/refs")][0])
 
+    def test_accepted_legacy_pr21_base_receipt_is_verified(self):
+        historic = pr(number=21, head="74196f657d0e98928d495ce54c7a8b219ff49f3a",
+                      base="d0164a9e0c322cb70422dccd9a2f96a78bb41c49")
+        candidate, _ = w.classify(historic)
+        receipt = w.legacy_attestation(candidate)
+        self.assertEqual(receipt["base_sha"], candidate["base_sha"])
+        self.assertEqual(receipt["run_id"], 43642752510)
+        s = Stub(p=historic, legacy_only=True)
+        result = w.run("dispatch", s, self.env)
+        self.assertEqual(result["results"][0]["status"], "LEGACY_BASE_ATTESTED")
+        self.assertEqual(result["results"][0]["base_sha"], receipt["base_sha"])
+        self.assertFalse(any(method == "POST" for method, path, body in s.calls))
+
+    def test_legacy_pr21_base_change_dispatches_distinct_v2_once(self):
+        historic = pr(number=21, head="74196f657d0e98928d495ce54c7a8b219ff49f3a",
+                      base="d" * 40)
+        s = Stub(p=historic, legacy_only=True)
+        outcome = w.run("dispatch", s, self.env)
+        self.assertEqual(outcome["results"][0]["status"], "DISPATCHED")
+        self.assertEqual(outcome["results"][0]["base_sha"], "d" * 40)
+        posts = [body for method, path, body in s.calls if method == "POST"]
+        self.assertEqual(len(posts), 3)
+        self.assertTrue(posts[0]["ref"].endswith("-b-" + "d" * 40))
+        self.assertEqual(posts[1]["inputs"]["expected_base_sha"], "d" * 40)
+
+    def test_unknown_legacy_claim_remains_blocked(self):
+        s = Stub(legacy_only=True)
+        outcome = w.run("dispatch", s, self.env)
+        self.assertEqual(outcome["results"][0]["status"], "LEGACY_CLAIM_RECONCILE")
+        self.assertFalse(any(method == "POST" for method, path, body in s.calls))
+
     def test_claim_write_error_does_not_dispatch(self):
         s = Stub(fail=("POST", f"repos/{w.CONTROLLER}/git/refs"))
         with self.assertRaises(w.WatchError):
