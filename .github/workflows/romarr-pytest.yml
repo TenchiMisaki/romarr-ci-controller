@@ -104,7 +104,7 @@ jobs:
           package-manager-cache: false
 
       - name: Prepare required archive tools on isolated GitHub runner
-        run: bash controller/scripts/prepare_archive_tools.sh
+        run: bash controller/controller/scripts/prepare_archive_tools.sh
       - name: Install ROMarr's official CI test prerequisites
         working-directory: romarr
         run: |
@@ -114,7 +114,7 @@ jobs:
 
       - name: Verify ROMarr recognizes libarchive and split-RAR tooling
         working-directory: romarr
-        run: bash ../controller/scripts/verify_archive_tools.sh
+        run: bash ../controller/controller/scripts/verify_archive_tools.sh
       - name: Run exact-source pytest and collect anonymous case outcomes
         id: pytest
         env:

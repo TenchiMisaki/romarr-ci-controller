@@ -2,6 +2,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import os
+import shutil
 import subprocess
 import unittest
 
@@ -13,10 +14,56 @@ VERIFY = ROOT / "controller" / "scripts" / "verify_archive_tools.sh"
 class ArchiveLogClarity(unittest.TestCase):
     def test_workflow_runs_files_without_echoing_guards(self):
         content = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("run: bash controller/scripts/prepare_archive_tools.sh", content)
-        self.assertIn("working-directory: romarr\n        run: bash ../controller/scripts/verify_archive_tools.sh", content)
+        self.assertIn("run: bash controller/controller/scripts/prepare_archive_tools.sh", content)
+        self.assertIn("working-directory: romarr\n        run: bash ../controller/controller/scripts/verify_archive_tools.sh", content)
         self.assertNotIn("FAIL:", content)
         self.assertIn("run: python controller/controller/evidence.py gate", content)
+
+    def test_workflow_checkout_layout_is_explicit(self):
+        content = WORKFLOW.read_text(encoding="utf-8")
+        self.assertEqual(content.count("path: controller"), 1)
+        self.assertIn("working-directory: romarr", content)
+        self.assertIn("run: bash controller/controller/scripts/prepare_archive_tools.sh", content)
+        self.assertIn("run: bash ../controller/controller/scripts/verify_archive_tools.sh", content)
+
+    def test_prepare_script_resolves_from_real_actions_workspace(self):
+        # A real checkout with path: controller installs repository files inside
+        # <workspace>/controller, so source-relative scripts add another controller/.
+        with TemporaryDirectory() as temp:
+            workspace = Path(temp)
+            destination = workspace / "controller" / "controller" / "scripts"
+            destination.mkdir(parents=True)
+            shutil.copy2(PREPARE, destination / PREPARE.name)
+            env = dict(os.environ, GITHUB_REPOSITORY="wrong/unapproved",
+                       GITHUB_ACTIONS="true", RUNNER_OS="Linux")
+            p = subprocess.run(
+                ["bash", "controller/controller/scripts/prepare_archive_tools.sh"],
+                cwd=workspace, env=env, capture_output=True, text=True)
+            self.assertNotEqual(p.returncode, 0)
+            self.assertIn("FAIL: unexpected runner identity", p.stderr)
+            self.assertNotIn("No such file or directory", p.stderr)
+            self.assertIn("================ DIAGNOSTIC FINISH ================", p.stdout)
+
+    def test_verify_script_resolves_from_real_actions_workspace(self):
+        with TemporaryDirectory() as temp:
+            workspace = Path(temp)
+            destination = workspace / "controller" / "controller" / "scripts"
+            destination.mkdir(parents=True)
+            shutil.copy2(VERIFY, destination / VERIFY.name)
+            pkg = workspace / "romarr" / "romarr"
+            pkg.mkdir(parents=True)
+            (pkg / "__init__.py").write_text("", encoding="utf-8")
+            (pkg / "library.py").write_text(
+                "from types import SimpleNamespace\n"
+                "def bsdtar_path(): return 'found'\n"
+                "def rar_tool(): return SimpleNamespace(kind='7z')\n",
+                encoding="utf-8")
+            p = subprocess.run(
+                ["bash", "../controller/controller/scripts/verify_archive_tools.sh"],
+                cwd=workspace / "romarr", capture_output=True, text=True)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertIn("ROMarr archive tool detection PASS", p.stdout)
+            self.assertNotIn("FAIL:", p.stdout + p.stderr)
 
     def test_all_six_rejection_messages_still_exist(self):
         first = PREPARE.read_text(encoding="utf-8")
