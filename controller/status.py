@@ -192,8 +192,17 @@ def pytest_status(api, pr):
             status = ("WORKFLOW_SUCCESS_ARTIFACT_PRESENT_CONTENTS_UNVERIFIED"
                       if len(matches) == 1 else "WORKFLOW_SUCCESS_ARTIFACT_UNVERIFIED")
         return {"status": status, "run_id": run_id}
-    return {"status": ("LEGACY_CLAIM_RECONCILE" if watch.claim_exists(api, pr, legacy=True)
-                       else "NOT_DISPATCHED"), "run_id": None}
+    if watch.claim_exists(api, pr, legacy=True):
+        attested = watch.legacy_attestation(pr)
+        if attested is None:
+            return {"status": "LEGACY_CLAIM_RECONCILE", "run_id": None}
+        return {"status": ("LEGACY_BASE_ATTESTED_HISTORICAL" if
+                           attested["base_sha"] == pr["base_sha"] else
+                           "BASE_CHANGED_RETEST_REQUIRED"),
+                "run_id": attested["run_id"],
+                "attested_base_sha": attested["base_sha"],
+                "artifact_sha256": attested["archive_sha256"]}
+    return {"status": "NOT_DISPATCHED", "run_id": None}
 
 
 def report(api, pr, *, token, thread_reader=None):
