@@ -98,6 +98,13 @@ class Discovery(unittest.TestCase):
         with self.assertRaises(w.WatchError):
             w.classify(p)
 
+    def test_non_main_base_is_not_eligible(self):
+        p = pr()
+        p["base"]["ref"] = "feature/other-work"
+        candidate, reason = w.classify(p)
+        self.assertIsNone(candidate)
+        self.assertEqual(reason, "non_main_base")
+
     def test_pagination_and_sorted(self):
         s = Stub()
         eligible, other = w.discover(s)
@@ -195,6 +202,14 @@ class Transport(unittest.TestCase):
     def test_api_requires_token_for_write(self):
         with self.assertRaises(w.WatchError):
             w.API().request("POST", f"repos/{w.CONTROLLER}/git/refs", {})
+
+    def test_api_forbids_source_repo_mutations_even_with_token(self):
+        with self.assertRaisesRegex(w.WatchError, "Mutation target"):
+            w.API("dummy-token").request("POST", f"repos/{w.SOURCE}/git/refs", {})
+
+    def test_api_forbids_unrelated_controller_mutations(self):
+        with self.assertRaisesRegex(w.WatchError, "Mutation target"):
+            w.API("dummy-token").request("POST", f"repos/{w.CONTROLLER}/issues", {})
 
     def test_no_retry_for_post(self):
         def fail(req, timeout):
