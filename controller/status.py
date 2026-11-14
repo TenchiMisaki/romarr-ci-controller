@@ -6,6 +6,7 @@ CodeRabbit review. Missing GraphQL thread evidence remains NOT VERIFIED.
 """
 from __future__ import annotations
 
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -98,6 +99,32 @@ def graphql_threads(number, sha, token, opener=urlopen):
     raise watch.WatchError("GraphQL threads exceed 1000; status unverified")
 
 
+def newest_check_run(checks):
+    """Select by explicit start time, not an assumed GitHub API row order.
+
+    If multiple runs cannot be ordered unambiguously, withhold review readiness.
+    """
+    if not checks:
+        return None
+    if len(checks) == 1:
+        return checks[0]
+    dated = []
+    for check in checks:
+        started = check.get("started_at")
+        if not isinstance(started, str):
+            return None
+        try:
+            timestamp = datetime.fromisoformat(started.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if timestamp.utcoffset() is None:
+            return None
+        dated.append((timestamp, check))
+    newest_time = max(timestamp for timestamp, _ in dated)
+    latest = [check for timestamp, check in dated if timestamp == newest_time]
+    return latest[0] if len(latest) == 1 else None
+
+
 def review_status(api, pr, *, thread_reader):
     """Separate check execution, current-head review coverage and thread state."""
     sha = pr["sha"]
@@ -110,11 +137,13 @@ def review_status(api, pr, *, thread_reader):
                 item.get("name") == "CodeRabbit" and
                 (item.get("app") or {}).get("slug") == "coderabbitai" and
                 item.get("head_sha") == sha]
-    if selected:
-        check = selected[-1]
+    check = newest_check_run(selected)
+    if check is not None:
         result["check"] = ("SUCCESS" if check.get("status") == "completed" and
                            check.get("conclusion") == "success" else
                            str(check.get("conclusion") or check.get("status") or "UNKNOWN").upper())
+    elif selected:
+        result["check"] = "ORDER_UNVERIFIED"
     comments = pages(api, f"issues/{number}/comments")
     summaries = [c for c in comments if isinstance(c, dict) and
                  (c.get("user") or {}).get("login") == "coderabbitai[bot]" and

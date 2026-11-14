@@ -93,6 +93,36 @@ class Review(unittest.TestCase):
         self.assertEqual(r["new_findings"], "NO_NEW_ACTIONABLE")
         self.assertEqual(r["unresolved_threads"], 0)
 
+    def test_multiple_checks_select_newest_regardless_of_api_order(self):
+        older = dict(check(), started_at="2026-11-14T21:00:00Z", id=101)
+        newer = dict(check(conclusion="failure"), started_at="2026-11-14T21:05:00Z", id=102)
+        for rows in ([older, newer], [newer, older]):
+            with self.subTest(order=[item["id"] for item in rows]):
+                r = s.review_status(ReadAPI(checks=rows, comments=[comment()]),
+                                    P, thread_reader=threads())
+                self.assertEqual(r["check"], "FAILURE")
+                self.assertNotEqual(r["status"], "REVIEW_READY")
+
+    def test_newer_in_progress_check_blocks_older_success(self):
+        older = dict(check(), started_at="2026-11-14T21:00:00Z", id=101)
+        newer = dict(check(status="in_progress", conclusion=None),
+                     started_at="2026-11-14T21:05:00Z", id=102)
+        r = s.review_status(ReadAPI(checks=[newer, older], comments=[comment()]),
+                            P, thread_reader=threads())
+        self.assertEqual(r["check"], "IN_PROGRESS")
+        self.assertNotEqual(r["status"], "REVIEW_READY")
+
+    def test_ambiguous_check_order_fails_closed(self):
+        dated = dict(check(), started_at="2026-11-14T21:00:00Z", id=101)
+        no_start = dict(check(), id=102)
+        tied = dict(check(), started_at="2026-11-14T21:00:00Z", id=103)
+        for rows in ([dated, no_start], [dated, tied]):
+            with self.subTest(rows=rows):
+                r = s.review_status(ReadAPI(checks=rows, comments=[comment()]),
+                                    P, thread_reader=threads())
+                self.assertEqual(r["check"], "ORDER_UNVERIFIED")
+                self.assertNotEqual(r["status"], "REVIEW_READY")
+
     def test_green_check_only_is_not_clean(self):
         r = s.review_status(ReadAPI(checks=[check()]), P, thread_reader=threads())
         self.assertEqual(r["status"], "REVIEW_NOT_VERIFIED")
