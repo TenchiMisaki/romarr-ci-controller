@@ -140,6 +140,22 @@ class Receipts(unittest.TestCase):
         self.assertEqual(s.pytest_status(a, P)["status"], "LEGACY_CLAIM_RECONCILE")
         self.assertTrue(all(m == "GET" for m, _ in a.calls))
 
+    def test_verified_old_pr21_receipt_has_exact_historical_base(self):
+        historic = dict(P, sha="74196f657d0e98928d495ce54c7a8b219ff49f3a",
+                        base_sha="d0164a9e0c322cb70422dccd9a2f96a78bb41c49")
+        r = s.pytest_status(ReadAPI(legacy=True), historic)
+        self.assertEqual(r["status"], "LEGACY_BASE_ATTESTED_HISTORICAL")
+        self.assertEqual(r["run_id"], 43642752510)
+        self.assertEqual(r["attested_base_sha"], historic["base_sha"])
+
+    def test_changed_base_is_not_same_legacy_test(self):
+        historic = dict(P, sha="74196f657d0e98928d495ce54c7a8b219ff49f3a",
+                        base_sha="d" * 40)
+        r = s.pytest_status(ReadAPI(legacy=True), historic)
+        self.assertEqual(r["status"], "BASE_CHANGED_RETEST_REQUIRED")
+        self.assertEqual(r["attested_base_sha"],
+                         "d0164a9e0c322cb70422dccd9a2f96a78bb41c49")
+
     def test_claim_without_run_never_passes(self):
         self.assertEqual(s.pytest_status(ReadAPI(claimed=True), P)["status"],
                          "CLAIM_WITHOUT_UNIQUE_RUN")
