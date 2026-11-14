@@ -64,12 +64,15 @@ def require_sha(value, label):
     return value.lower()
 
 
-def resolve(mode: str, pr: str, expected: str, fetch=github_get):
+def resolve(mode: str, pr: str, expected: str, fetch=github_get, *, expected_base: str = ""):
     if mode not in ("pull_request", "main"):
         raise TargetError("Target mode must be pull_request or main")
     if expected and not SHA.fullmatch(expected):
         raise TargetError("Expected SHA must be a complete 40-hex commit")
+    if expected_base and not SHA.fullmatch(expected_base):
+        raise TargetError("Expected base SHA must be a complete 40-hex commit")
     expected = expected.lower()
+    expected_base = expected_base.lower()
     if mode == "main":
         fork = fetch(f"{FORK}/branches/main")
         upstream = fetch(f"{UPSTREAM}/branches/main")
@@ -107,6 +110,8 @@ def resolve(mode: str, pr: str, expected: str, fetch=github_get):
             raise TargetError("PR head or base ref is missing")
     if expected and expected != result["sha"]:
         raise TargetError("Expected SHA differs from the current source SHA")
+    if expected_base and expected_base != result["base_sha"]:
+        raise TargetError("Expected base SHA differs from the current PR base SHA")
     return result
 
 
@@ -159,7 +164,9 @@ def main():
     private = Path(os.environ["RUNNER_TEMP"]) / "romarr-ci-private"
     public = Path(os.environ["RUNNER_TEMP"]) / "romarr-ci-public"
     if sys.argv[1] == "resolve":
-        target = resolve(os.environ["INPUT_TARGET"], os.environ.get("INPUT_PR_NUMBER", ""), os.environ.get("INPUT_EXPECTED_SHA", ""))
+        target = resolve(os.environ["INPUT_TARGET"], os.environ.get("INPUT_PR_NUMBER", ""),
+                         os.environ.get("INPUT_EXPECTED_SHA", ""),
+                         expected_base=os.environ.get("INPUT_EXPECTED_BASE_SHA", ""))
         atomic_json(private / "target.json", target)
         output = os.environ.get("GITHUB_OUTPUT")
         if output:

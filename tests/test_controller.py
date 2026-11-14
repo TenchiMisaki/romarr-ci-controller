@@ -50,6 +50,20 @@ class TargetTests(unittest.TestCase):
         self.assertEqual(x["sha"], S1)
         self.assertEqual(x["base_sha"], S2)
 
+    def test_exact_base_pin_passes_and_rejects_changed_base(self):
+        x = target.resolve("pull_request", "25", S1, lambda path: fake_pr(), expected_base=S2)
+        self.assertEqual((x["sha"], x["base_sha"]), (S1, S2))
+        with self.assertRaisesRegex(target.TargetError, "base SHA differs"):
+            target.resolve("pull_request", "25", S1, lambda path: fake_pr(base=S1), expected_base=S2)
+
+    def test_invalid_expected_base_rejected(self):
+        with self.assertRaisesRegex(target.TargetError, "Expected base SHA"):
+            target.resolve("pull_request", "25", S1, lambda path: fake_pr(), expected_base="deadbeef")
+
+    def test_legacy_manual_call_still_works(self):
+        x = target.resolve("pull_request", "25", S1, lambda path: fake_pr())
+        self.assertEqual(x["base_sha"], S2)
+
     def test_head_changed_fails(self):
         with self.assertRaisesRegex(target.TargetError, "differs"):
             target.resolve("pull_request", "25", S2, lambda path: fake_pr())

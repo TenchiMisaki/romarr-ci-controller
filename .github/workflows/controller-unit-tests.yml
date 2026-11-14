@@ -38,3 +38,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python controller/watch.py audit
+      - name: Report current PR pytest and CodeRabbit state (read-only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python controller/status.py audit
