@@ -53,7 +53,7 @@ class WorkflowWarnings(unittest.TestCase):
         source = (ROOT / "romarr-pr-monitor.yml").read_text(encoding="utf-8")
         self.assertIn("  schedule:", source)
         self.assertIn("cron: '17,47 * * * *'", source)
-        self.assertIn("permissions:\\n  contents: read", source)
+        self.assertIn("permissions:\n  contents: read", source)
         self.assertIn("      contents: read", source)
         self.assertIn("python controller/watch.py audit", source)
         self.assertIn("python controller/status.py audit", source)
@@ -62,7 +62,7 @@ class WorkflowWarnings(unittest.TestCase):
         self.assertNotIn("      contents: write", source)
         self.assertNotIn("ROMARR_WATCH_DISPATCH", source)
         self.assertNotIn("python controller/watch.py dispatch", source)
-        self.assertNotRegex(source, r"(?m)^\\s*push:\\s*$")
+        self.assertNotRegex(source, r"(?m)^\s*push:\s*$")
 
 
 if __name__ == "__main__":
