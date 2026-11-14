@@ -1,0 +1,62 @@
+name: ROMarr PR watch - Stage 2 manual candidate
+
+# Deliberately MANUAL ONLY until the scheduler and write permissions receive
+# a separate owner-authorized GitHub-hosted acceptance test.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Read-only discovery, or separately approved controlled dispatch
+        type: choice
+        options: [audit, dispatch]
+        default: audit
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: romarr-pr-watch-singleton
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    if: ${{ inputs.mode == 'audit' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout trusted controller code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - name: Read-only PR discovery and durable-tag inspection
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python controller/watch.py audit
+
+  dispatch:
+    if: ${{ inputs.mode == 'dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write # Only controller repo immutable claim + run-ID tags
+      actions: write  # Only controller repo existing manual pytest workflow
+    steps:
+      - name: Checkout trusted controller code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - name: Controlled new-head test dispatch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROMARR_WATCH_DISPATCH: YES
+        run: python controller/watch.py dispatch
