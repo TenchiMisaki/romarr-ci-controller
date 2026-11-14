@@ -254,9 +254,13 @@ def run(mode, api, environ):
                     outcome = {"number": pr["number"], "sha": pr["sha"], "status": "DEFERRED_RATE_BOUND"}
                 else:
                     outcome = dispatch_one(api, pr, controller_sha)
+                # All outcomes carry both immutable PR identities, including
+                # legacy reconciliation, skipped claims and successful dispatch.
+                outcome["base_sha"] = pr["base_sha"]
                 report["results"].append(outcome)
             except WatchError as exc:
                 report["results"].append({"number": pr["number"], "sha": pr["sha"],
+                                          "base_sha": pr["base_sha"],
                                           "status": "BLOCKED", "reason": str(exc)})
         print(json.dumps(report, sort_keys=True, indent=2))
         if any(x["status"] == "BLOCKED" for x in report["results"]):
