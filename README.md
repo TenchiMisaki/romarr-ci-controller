@@ -1,6 +1,6 @@
-# ROMarr GitHub pytest controller — manual pilot v01
+# ROMarr GitHub pytest controller — staged CI orchestration
 
-**Status: GITHUB-HOSTED FULL PYTEST BASELINE ACCEPTED WITH ARCHIVE-TOOL PREREQUISITES VERIFIED.**
+**Current status (November 14, 2026): Stage 2B manual watcher and review-status reporting accepted; merged PR #5 corrected the nested-checkout path regression and its manual full pytest reacceptance passed. Stage 2C exact single-PR selection, unattended scheduling, and automated CodeRabbit follow-through are NOT ACCEPTED.**
 
 This is a separate **public** GitHub repository to host ROMarr test orchestration. It does **not** modify `TenchiMisaki/romarr`, `BlizzHacker/romarr`, any separate fork-sync automation, any private infrastructure, or production Docker services. No workflow schedules, deployments, image publication, or PR-writing permissions are included in v01.
 
@@ -35,7 +35,7 @@ The runner captures private raw pytest output/JUnit XML only in the GitHub-hoste
 
 ## Handoff to ChatGPT
 
-For **controller development**, ask: "Continue the ROMarr CI controller from accepted Stage 2B in [merged PR #2](https://github.com/TenchiMisaki/romarr-ci-controller/pull/2), at main 32a4d6d. Read current workflows, tests, README and VALIDATION. Finish exact-SHA single-PR targeting before any further controlled v2 dispatch, preserve previously accepted evidence, and keep scheduling and autonomous code changes separately gated. Do not switch to upstream ROMarr PR #188."
+For **controller development**, continue after accepted [merged PR #5](https://github.com/TenchiMisaki/romarr-ci-controller/pull/5) and [manual pytest run #43650616565](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43650616565), controller `main` `88c284d1a82156849acba85c5a38911edd8a4e2e`. Preserve PR #5 acceptance; implement Stage 2C one-exact-PR/head/base dispatch isolation, with negative tests for all other eligible PRs, duplicate claims and identity movement. After exact-head CI and review, obtain the separate owner gate before a controller merge or live v2 dispatch. Scheduling and CodeRabbit-driven source edits remain separate later stages.
 
 The ordinary ChatGPT session remains user-initiated. The controller cannot automatically summon ChatGPT or create source changes. This is **the baseline manual-dispatch pytest milestone**, before a separate authenticated scheduler/review monitor is installed and accepted.
 
@@ -76,3 +76,13 @@ The successful [full pytest run #43648554384](https://github.com/TenchiMisaki/ro
 ## Follow-up correction — controller checkout nesting (November 14, 2026)
 
 [Live acceptance #43650043828](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43650043828) revealed a real **controller workflow path regression**, not six failed archive prerequisites. The controller repository is checked out into `<workspace>/controller`, making its `controller/scripts/` source paths resolve to `<workspace>/controller/controller/scripts/`. Stage 2B PR #4 used the shorter path and the prepare step exited 127 with a missing-file error; full pytest was **NOT RUN**, the source postcheck was **UNCHANGED**, and the final gate correctly reported `TEST=NOT_TESTED`, `COLLECTION=FAILED`. An error-only sanitized artifact was retained, not proof of completed tests. This follow-up fixes both checkout-relative Bash invocations and extends regression tests with a realistic temporary GitHub Actions workspace/checkout layout, preserving all six failure guards, the manual-only workflow, and the accepted evidence gates. New GitHub-hosted full pytest and complete log/artifact inspection remain required after separate merge authorization.
+
+## Current verification — PR #5 acceptance and Stage 2C boundary (November 14, 2026)
+
+Controller [PR #5](https://github.com/TenchiMisaki/romarr-ci-controller/pull/5) was squash-merged into `main` at `88c284d1a82156849acba85c5a38911edd8a4e2e`. The post-merge [manual full pytest run #43650616565](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43650616565) completed **SUCCESS**, with all reported job steps successful and final `TEST=PASS; COLLECTION=PASS; SOURCE=UNCHANGED`. Its available public sanitized artifact is `romarr-pytest-handoff-43650616565-1` (ID `14135902361`, **12,042 bytes**, GitHub-reported SHA-256 `90025bced6f590c50704267dd90062536403137b3b038d979d4675402ea40b7c`). The GitHub artifact digest and job acceptance were checked; this statement does not claim a fresh independent ZIP/member readback in this update.
+
+Preserve [historical failed run #43650043828](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43650043828) at pre-fix controller `768c8c7cdf55cc65d8945ea8f1cefea0dd49bd25`: the nested-checkout archive preparation path did not exist (exit 127), so full pytest was **NOT TESTED** there, and the final gate failed closed. That failure is not superseded as a historical fact by the fixed rerun.
+
+The accepted pytest evidence still reports two skipped cases. Source inspection at ROMarr PR #21 head `74196f657d0e98928d495ce54c7a8b219ff49f3a` found an obsolete optional `health_report` test in `tests/test_security_claims.py` (actual anonymous health endpoint has separate HTTP tests) and an opt-in Playwright/Chromium test in `tests/test_site_downloader.py` (the standard CI runner installs neither). These are **source-derived explanations, not an independently proven mapping of anonymous case ordinals to names**. Browser integration coverage remains unexecuted and should receive an explicitly scoped optional-browser test plan, not a false PASS.
+
+**Stage 2C not accepted:** The current watcher dispatch mode iterates every eligible non-draft PR and may dispatch two tests per invocation. Require explicit one-PR number, complete head SHA and complete base SHA, reject missing/mismatched selectors before a claim write, and prove that unrelated eligible PRs receive no claims or dispatches. Keep the read-only multi-PR audit, manual Stage 1 pytest, historical v1 receipts, v2 identity, and failure-safe behavior intact. A manual pytest success is **not** a newly verified v2 watcher dispatch. No scheduler, autonomous source mutation, or production deployment is authorized by this note.
