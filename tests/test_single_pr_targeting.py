@@ -181,6 +181,38 @@ class SinglePRTargeting(unittest.TestCase):
                              for method, path, _ in api.calls), 1)
         self.assertFalse(any(path.endswith("/dispatches") for _, path, _ in api.calls))
 
+    def test_workflow_wires_three_exact_inputs_to_dispatch(self):
+        from pathlib import Path
+
+        source = (Path(__file__).resolve().parents[1] / ".github" /
+                  "workflows" / "romarr-pr-watch.yml").read_text(encoding="utf-8")
+        for input_name in ("pr_number", "expected_head_sha", "expected_base_sha"):
+            with self.subTest(input_name=input_name):
+                self.assertIn(f"      {input_name}:", source)
+        for variable, input_name in (
+            ("ROMARR_SELECTED_PR", "pr_number"),
+            ("ROMARR_SELECTED_HEAD_SHA", "expected_head_sha"),
+            ("ROMARR_SELECTED_BASE_SHA", "expected_base_sha"),
+        ):
+            with self.subTest(variable=variable):
+                self.assertIn(f"{variable}: ${{{{ inputs.{input_name} }}}}", source)
+
+    def test_workflow_keeps_audit_read_only_and_no_schedule(self):
+        from pathlib import Path
+
+        source = (Path(__file__).resolve().parents[1] / ".github" /
+                  "workflows" / "romarr-pr-watch.yml").read_text(encoding="utf-8")
+        self.assertIn("  workflow_dispatch:", source)
+        self.assertNotIn("  schedule:", source)
+        self.assertNotIn("  push:", source)
+        self.assertIn("permissions: {}", source)
+        self.assertIn("    if: ${{ inputs.mode == 'audit' }}", source)
+        self.assertIn("    if: ${{ inputs.mode == 'dispatch' }}", source)
+        audit_job = source.split("\n  audit:\n", 1)[1].split("\n  dispatch:\n", 1)[0]
+        self.assertIn("      contents: read", audit_job)
+        self.assertNotIn("      actions: write", audit_job)
+        self.assertNotIn("ROMARR_WATCH_DISPATCH: YES", audit_job)
+
 
 if __name__ == "__main__":
     unittest.main()
