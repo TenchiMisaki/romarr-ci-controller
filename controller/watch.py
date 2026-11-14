@@ -106,8 +106,6 @@ def classify(pr):
         raise WatchError("Missing PR branch")
     if title.lower().startswith(("backlog:", "review:")) or head_ref.startswith(("notes/", "review/")):
         return None, "backlog_or_review"
-    if base_ref != "main":
-        return None, "non_main_base"
     head_repo, base_repo = head.get("repo"), base.get("repo")
     if not isinstance(head_repo, dict) or not isinstance(base_repo, dict):
         return None, "unapproved_repository"
