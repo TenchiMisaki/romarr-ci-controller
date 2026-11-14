@@ -50,6 +50,10 @@ jobs:
     steps:
       - name: Checkout controller sources (no persisted credentials)
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
         with:
           path: controller
           persist-credentials: false
@@ -71,6 +75,10 @@ jobs:
 
       - name: Checkout pinned public ROMarr source (read-only)
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
         with:
           repository: TenchiMisaki/romarr
           ref: ${{ steps.resolve.outputs.sha }}
@@ -79,6 +87,10 @@ jobs:
 
       - name: Checkout ROMarr's upstream Archive.org test fixture
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
         with:
           repository: BlizzHacker/rom-hub-archive-org
           ref: 3b49c1c67ccedfc5f072c19e3dd4990fec0b0d5f # upstream v0.4.1 ref resolved to immutable SHA
@@ -178,7 +190,7 @@ jobs:
       - name: Upload sanitized evidence (never raw JUnit or test logs)
         id: upload
         if: ${{ always() && steps.resolve.outcome == 'success' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0, Node.js 24
         with:
           name: romarr-pytest-handoff-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/romarr-ci-public/

@@ -28,6 +28,10 @@ jobs:
     steps:
       - name: Checkout trusted controller code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
         with:
           persist-credentials: false
       - name: Set up Python
@@ -49,6 +53,10 @@ jobs:
     steps:
       - name: Checkout trusted controller code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
         with:
           persist-credentials: false
       - name: Set up Python
