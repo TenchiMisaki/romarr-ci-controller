@@ -42,6 +42,11 @@ class API:
         if not (path.startswith("repos/" + CONTROLLER + "/") or
                 path.startswith("repos/" + SOURCE + "/")):
             raise WatchError("API repository outside approved scope")
+        if method == "POST" and path not in (
+            f"repos/{CONTROLLER}/git/refs",
+            f"repos/{CONTROLLER}/actions/workflows/{WORKFLOW}/dispatches",
+        ):
+            raise WatchError("Mutation target outside controller claim/dispatch scope")
         if method == "POST" and not self.token:
             raise WatchError("Authenticated controller token required for mutations")
         data = json.dumps(body, separators=(",", ":")).encode() if body is not None else None
@@ -101,6 +106,8 @@ def classify(pr):
         raise WatchError("Missing PR branch")
     if title.lower().startswith(("backlog:", "review:")) or head_ref.startswith(("notes/", "review/")):
         return None, "backlog_or_review"
+    if base_ref != "main":
+        return None, "non_main_base"
     head_repo, base_repo = head.get("repo"), base.get("repo")
     if not isinstance(head_repo, dict) or not isinstance(base_repo, dict):
         return None, "unapproved_repository"
