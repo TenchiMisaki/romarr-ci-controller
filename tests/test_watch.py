@@ -21,9 +21,10 @@ def pr(number=25, head=H, base=B, title="feat: add feature", ref="feature/update
 
 
 class Stub:
-    def __init__(self, p=None, prior=False, dispatch=None, fail=None):
+    def __init__(self, p=None, prior=False, legacy_only=False, dispatch=None, fail=None):
         self.p = p or pr()
         self.prior = prior
+        self.legacy_only = legacy_only
         self.dispatch = dispatch or {"workflow_run_id": 123,
                                      "html_url": "https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/123"}
         self.fail = fail
@@ -42,7 +43,7 @@ class Stub:
         if path == f"repos/{w.CONTROLLER}/git/ref/heads/main":
             return {"ref": "refs/heads/main", "object": {"sha": C}}
         if "/git/ref/tags/" in path:
-            if not self.prior:
+            if not self.prior and not (self.legacy_only and "/romarr-ci-v1/" in path):
                 return None
             return {"ref": "refs/tags/" + path.split("/tags/")[1],
                     "object": {"type": "commit", "sha": C}}
@@ -113,7 +114,18 @@ class Discovery(unittest.TestCase):
         self.assertEqual(other, [])
 
     def test_claim_dedup_key(self):
-        self.assertEqual(w.claim_name(w.classify(pr())[0]), "romarr-ci-v1/pr-25-" + H)
+        self.assertEqual(w.claim_name(w.classify(pr())[0]), "romarr-ci-v2/pr-25-h-" + H + "-b-" + B)
+        self.assertEqual(w.legacy_claim_name(w.classify(pr())[0]), "romarr-ci-v1/pr-25-" + H)
+
+    def test_base_only_change_creates_distinct_new_claim(self):
+        first, _ = w.classify(pr(head=H, base=B))
+        second, _ = w.classify(pr(head=H, base=C))
+        self.assertNotEqual(w.claim_name(first), w.claim_name(second))
+        self.assertEqual(w.legacy_claim_name(first), w.legacy_claim_name(second))
+
+    def test_bad_base_sha_blocks(self):
+        with self.assertRaises(w.WatchError):
+            w.classify(pr(base="abc"))
 
     def test_changed_head_fails_freshness(self):
         s = Stub(p=pr(head=B))
@@ -154,6 +166,7 @@ class Dispatch(unittest.TestCase):
         self.assertEqual([x[0] for x in s.calls].count("POST"), 3)  # tag, dispatch, run tag
         posts = [x for x in s.calls if x[0] == "POST"]
         self.assertEqual(posts[1][2]["inputs"]["expected_sha"], H)
+        self.assertEqual(posts[1][2]["inputs"]["expected_base_sha"], B)
         self.assertTrue(posts[1][2]["return_run_details"])
 
     def test_prior_claim_skips(self):
@@ -161,6 +174,19 @@ class Dispatch(unittest.TestCase):
         result = w.dispatch_one(s, self.c, C)
         self.assertEqual(result["status"], "ALREADY_CLAIMED")
         self.assertFalse(any(x[0] == "POST" for x in s.calls))
+
+    def test_legacy_claim_blocks_unapproved_replay(self):
+        s = Stub(legacy_only=True)
+        result = w.dispatch_one(s, self.c, C)
+        self.assertEqual(result["status"], "LEGACY_CLAIM_RECONCILE")
+        self.assertFalse(any(x[0] == "POST" for x in s.calls))
+
+    def test_base_only_change_new_v2_claim_dispatches(self):
+        candidate, _ = w.classify(pr(head=H, base=C))
+        s = Stub(p=pr(head=H, base=C))
+        o = w.dispatch_one(s, candidate, C)
+        self.assertEqual(o["status"], "DISPATCHED")
+        self.assertIn("-b-" + C, [x[2]["ref"] for x in s.calls if x[1].endswith("/git/refs")][0])
 
     def test_claim_write_error_does_not_dispatch(self):
         s = Stub(fail=("POST", f"repos/{w.CONTROLLER}/git/refs"))
@@ -188,6 +214,12 @@ class Dispatch(unittest.TestCase):
         s = Stub()
         result = w.run("audit", s, {})
         self.assertEqual(result["results"][0]["status"], "UNCLAIMED")
+        self.assertFalse(any(x[0] == "POST" for x in s.calls))
+
+    def test_audit_marks_legacy_as_reconciliation(self):
+        s = Stub(legacy_only=True)
+        result = w.run("audit", s, {})
+        self.assertEqual(result["results"][0]["status"], "LEGACY_CLAIM_RECONCILE")
         self.assertFalse(any(x[0] == "POST" for x in s.calls))
 
     def test_wrong_command_fails(self):
