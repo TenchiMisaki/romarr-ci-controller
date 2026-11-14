@@ -101,7 +101,9 @@ jobs:
 
       - name: Independently recheck the live source head and local checkout
         if: ${{ always() && steps.resolve.outcome == 'success' }}
-        # No token in any step after the tested source has executed.
+        # Authenticated read-only metadata lookup. No token is given to the pytest step.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: python controller/controller/target.py postcheck
 
       - name: Finalize sanitized evidence and checksum manifest
