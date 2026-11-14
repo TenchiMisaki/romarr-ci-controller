@@ -1,0 +1,45 @@
+name: ROMarr PR and CodeRabbit read-only monitor
+
+# Stage 3A: metadata only. No claim tags, workflow dispatch or source writes.
+# The separate Stage 2C manual exact-target workflow remains unchanged.
+on:
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: romarr-pr-monitor-readonly
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout controller default branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.13
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - name: Read-only eligibility and historical claim audit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python controller/watch.py audit
+      - name: Read-only exact-head pytest and CodeRabbit metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python controller/status.py audit > "$RUNNER_TEMP/romarr-status.json"
+      - name: Publish sanitized metadata summary
+        run: python controller/monitor_summary.py "$RUNNER_TEMP/romarr-status.json" >> "$GITHUB_STEP_SUMMARY"
