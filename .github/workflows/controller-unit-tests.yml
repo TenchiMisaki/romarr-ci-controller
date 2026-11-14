@@ -1,0 +1,32 @@
+name: Controller unit tests
+
+# Run only on changes to this controller PR. This never dispatches ROMarr pytest.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - 'controller/**'
+      - 'tests/**'
+      - '.github/workflows/romarr-pr-watch.yml'
+      - '.github/workflows/controller-unit-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout controller PR merge result
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.13
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - name: Compile controller and tests
+        run: python -m compileall -q controller tests
+      - name: Run offline controller regression suite
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
