@@ -59,7 +59,8 @@ class WorkflowWarnings(unittest.TestCase):
         self.assertIn("      contents: read", source)
         self.assertIn("python controller/watch.py audit", source)
         self.assertIn("python controller/status.py audit", source)
-        self.assertIn("python controller/monitor_summary.py", source)
+        self.assertIn("python controller/scheduled_receipt.py audit", source)
+        self.assertIn("python controller/scheduled_receipt.py finalize", source)
         self.assertNotIn("      actions: write", source)
         self.assertNotIn("      contents: write", source)
         self.assertNotIn("ROMARR_WATCH_DISPATCH", source)
@@ -69,7 +70,7 @@ class WorkflowWarnings(unittest.TestCase):
 
     def test_monitor_retains_only_sanitized_seven_day_evidence(self):
         source = (ROOT / "romarr-pr-monitor.yml").read_text(encoding="utf-8")
-        self.assertIn('run: python controller/monitor_summary.py "$RUNNER_TEMP/romarr-status.json" > "$RUNNER_TEMP/romarr-monitor-summary.md"', source)
+        self.assertIn('run: python controller/scheduled_receipt.py finalize "$RUNNER_TEMP/romarr-status.json" "$RUNNER_TEMP/romarr-receipt.json" "$RUNNER_TEMP/romarr-monitor-summary.md"', source)
         self.assertIn('run: cat "$RUNNER_TEMP/romarr-monitor-summary.md" >> "$GITHUB_STEP_SUMMARY"', source)
         self.assertEqual(source.count("uses: actions/upload-artifact@" + UPLOAD_SHA), 1)
         self.assertIn('path: ${{ runner.temp }}/romarr-monitor-summary.md', source)
@@ -81,8 +82,8 @@ class WorkflowWarnings(unittest.TestCase):
 
     def test_monitor_summary_is_rendered_before_publication_or_upload(self):
         source = (ROOT / "romarr-pr-monitor.yml").read_text(encoding="utf-8")
-        render = source.index("      - name: Render sanitized metadata summary")
-        publish = source.index("      - name: Publish sanitized metadata summary")
+        render = source.index("      - name: Finalize sanitized summary or safe incomplete-status fallback")
+        publish = source.index("      - name: Publish sanitized metadata and receipt summary")
         retain = source.index("      - name: Retain sanitized summary only (7 days)")
         self.assertLess(render, publish)
         self.assertLess(publish, retain)
