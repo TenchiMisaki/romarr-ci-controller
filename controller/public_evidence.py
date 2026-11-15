@@ -105,7 +105,8 @@ def inspect(path, *, repository: str, head: str, base: str, scope: str):
             raise EvidenceError("Upstream source identity mismatch")
         cases = _json(data["cases.json"])
         observed = _cases(cases, official=True)
-        if (not _counts_match(summary.get("counts"), observed) or summary.get("exit") != 0
+        if (not _counts_match(summary.get("counts"), observed)
+                or observed["failed"] or observed["error"] or summary.get("exit") != 0
                 or any(summary.get(key) != "PASS" for key in ("test", "environment", "collection"))
                 or summary.get("source") != "UNCHANGED"):
             raise EvidenceError("Upstream test, source, or case gate incomplete")
@@ -125,6 +126,7 @@ def inspect(path, *, repository: str, head: str, base: str, scope: str):
             raise EvidenceError("Controller source or case identity mismatch")
         observed = _cases(cases_doc.get("cases"), official=False)
         if (not _counts_match(cases_doc.get("counts"), observed) or not _counts_match(summary.get("counts"), observed)
+                or observed["failed"] or observed["errors"]
                 or cases_doc.get("run_id") != summary.get("run_id")
                 or cases_doc.get("run_attempt") != summary.get("run_attempt")
                 or summary.get("pytest_exit_code") != 0
