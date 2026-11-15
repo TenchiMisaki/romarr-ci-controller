@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from io import BytesIO
+from http.client import IncompleteRead
 import json
 import hashlib
 from pathlib import Path
@@ -108,9 +109,13 @@ class FakeClient:
         self.artifact_calls = []
         self.after_pr = None
         self.after_run = None
+        self.after_refs = None
 
     def get(self, path):
         self.calls.append(path)
+        if (self.after_refs is not None and
+                "/git/matching-refs/tags/" in path and self.calls.count(path) > 1):
+            return deepcopy(self.after_refs)
         if self.after_pr is not None and len(self.calls) > 7 and path.endswith("/pulls/28"):
             return deepcopy(self.after_pr)
         if self.after_run is not None and len(self.calls) > 7 and path.endswith(f"/actions/runs/{RUN_ID}"):
@@ -145,7 +150,7 @@ class ReceiptCollector(unittest.TestCase):
         self.assertEqual(got["status"], "RECEIPT_VERIFIED_SKIPS_REQUIRE_POLICY")
         self.assertFalse(got["unattended_actions_authorized"])
         self.assertEqual(self.client.artifact_calls, [ARTIFACT_ID])
-        self.assertEqual(len(self.client.calls), 11)
+        self.assertEqual(len(self.client.calls), 12)
 
     def test_wrong_expected_head_fails_before_reads(self):
         with self.assertRaisesRegex(CollectionError, "PR/head/base"):
@@ -174,6 +179,20 @@ class ReceiptCollector(unittest.TestCase):
         self.client.after_pr = pr
         self.client.after_run = run
         self.assertEqual(self.run_receipt()["public_evidence"], "PASS")
+
+    def test_run_ledger_becomes_ambiguous_during_download(self):
+        path = f"repos/{CONTROLLER}/git/matching-refs/tags/{CLAIM}-run-"
+        extra = deepcopy(self.fixture[path][0])
+        extra["ref"] += "-999"
+        self.client.after_refs = [deepcopy(self.fixture[path][0]), extra]
+        with self.assertRaisesRegex(CollectionError, "complete run-ID ledger changed"):
+            self.run_receipt()
+        self.assertEqual(self.client.artifact_calls, [ARTIFACT_ID])
+
+    def test_run_ledger_disappears_during_download(self):
+        self.client.after_refs = []
+        with self.assertRaisesRegex(CollectionError, "complete run-ID ledger changed"):
+            self.run_receipt()
 
     def test_run_attempt_change_blocks_current_result(self):
         run = deepcopy(self.fixture[f"repos/{CONTROLLER}/actions/runs/{RUN_ID}"])
@@ -290,6 +309,43 @@ class TransportSecurity(unittest.TestCase):
         mock = FakeOpener(redirect="https://a.blob.core.windows.net/x", artifact_bytes=b"x" * (MAX_ARCHIVE + 1))
         with tempfile.TemporaryDirectory() as root:
             with self.assertRaisesRegex(CollectionError, "size exceeds"):
+                GitHubReadClient(opener=mock).artifact(1, Path(root) / "file.zip")
+
+    def test_artifact_read_timeout_normalized_and_token_not_leaked(self):
+        class MidstreamTimeout(FakeOpener):
+            def open(self, request, timeout=15):
+                if request.full_url.startswith("https://api.github.com/"):
+                    return super().open(request, timeout=timeout)
+                self.requests.append(request)
+                class Broken(FakeResponse):
+                    def read(self, size=-1):
+                        if self.data.tell():
+                            raise TimeoutError("sensitive signed URL must not appear")
+                        return self.data.read(1)
+                return Broken(b"a" * 20)
+        mock = MidstreamTimeout(redirect="https://sample.blob.core.windows.net/file?sig=private")
+        with tempfile.TemporaryDirectory() as root:
+            client = GitHubReadClient(token="private-test-token", opener=mock)
+            with self.assertRaises(CollectionError) as context:
+                client.artifact(1, Path(root) / "file.zip")
+        self.assertEqual(str(context.exception), "Artifact body transport failed")
+        self.assertNotIn("private", str(context.exception))
+        self.assertEqual(len(mock.requests), 2)
+        self.assertNotIn("Authorization", mock.requests[1].headers)
+
+    def test_artifact_http_incomplete_read_normalized(self):
+        class MidstreamIncomplete(FakeOpener):
+            def open(self, request, timeout=15):
+                if request.full_url.startswith("https://api.github.com/"):
+                    return super().open(request, timeout=timeout)
+                self.requests.append(request)
+                class Broken(FakeResponse):
+                    def read(self, size=-1):
+                        raise IncompleteRead(b"short", 20)
+                return Broken(b"incomplete")
+        mock = MidstreamIncomplete(redirect="https://sample.blob.core.windows.net/file")
+        with tempfile.TemporaryDirectory() as root:
+            with self.assertRaisesRegex(CollectionError, "Artifact body transport failed"):
                 GitHubReadClient(opener=mock).artifact(1, Path(root) / "file.zip")
 
     def test_metadata_duplicate_keys_rejected(self):

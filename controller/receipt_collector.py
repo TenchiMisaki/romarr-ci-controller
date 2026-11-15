@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from http.client import HTTPException
 import re
 import sys
 import time
@@ -180,22 +181,28 @@ class GitHubReadClient:
         _must(_host_is_artifact_storage(signed), "Unapproved artifact redirect host")
         # The second request intentionally has NO authorization header.
         artifact_request = Request(signed, headers={"User-Agent": "romarr-receipt-collector-v01"}, method="GET")
-        with self._open(artifact_request, timeout=60) as response:
-            _must(response.status == 200, "Artifact storage returned unexpected response")
-            declared = response.headers.get("Content-Length")
-            if declared is not None:
-                _must(declared.isdecimal() and int(declared) <= MAX_ARCHIVE,
-                      "Artifact declared size exceeds bound")
-            size = 0
-            # Exclusive creation: do not overwrite a previous or linked file.
-            with target.open("xb") as output:
-                while True:
-                    chunk = response.read(min(65536, MAX_ARCHIVE + 1 - size))
-                    if not chunk:
-                        break
-                    size += len(chunk)
-                    _must(size <= MAX_ARCHIVE, "Artifact exceeds maximum download size")
-                    output.write(chunk)
+        try:
+            with self._open(artifact_request, timeout=60) as response:
+                _must(response.status == 200, "Artifact storage returned unexpected response")
+                declared = response.headers.get("Content-Length")
+                if declared is not None:
+                    _must(declared.isdecimal() and int(declared) <= MAX_ARCHIVE,
+                          "Artifact declared size exceeds bound")
+                size = 0
+                # Exclusive creation: do not overwrite a previous or linked file.
+                with target.open("xb") as output:
+                    while True:
+                        chunk = response.read(min(65536, MAX_ARCHIVE + 1 - size))
+                        if not chunk:
+                            break
+                        size += len(chunk)
+                        _must(size <= MAX_ARCHIVE, "Artifact exceeds maximum download size")
+                        output.write(chunk)
+        except (URLError, TimeoutError, ConnectionError, OSError, HTTPException):
+            # The open may succeed before a later read raises (timeout, reset,
+            # truncated HTTP body). The caller receives a sanitized BLOCKED,
+            # never a traceback exposing a signed storage URL.
+            raise CollectionError("Artifact body transport failed") from None
         _must(0 < size <= MAX_ARCHIVE, "Empty or excessive artifact download")
         if declared is not None:
             _must(size == int(declared), "Artifact download incomplete")
@@ -243,7 +250,8 @@ def collect_once(*, pr_number, expected_head, expected_base, client, inspect_art
     claim = f"romarr-ci-v2/pr-{pr_number}-h-{expected_head}-b-{expected_base}"
     tag_prefix = f"repos/{CONTROLLER}/git/ref/tags/"
     claim_ref = client.get(tag_prefix + claim)
-    refs = client.get(f"repos/{CONTROLLER}/git/matching-refs/tags/{claim}-run-")
+    refs_path = f"repos/{CONTROLLER}/git/matching-refs/tags/{claim}-run-"
+    refs = client.get(refs_path)
     _must(isinstance(refs, list) and len(refs) == 1 and
           isinstance(refs[0], dict),
           "Missing or ambiguous claim run-ID ledger")
@@ -289,10 +297,13 @@ def collect_once(*, pr_number, expected_head, expected_base, client, inspect_art
     after_run = client.get(run_path)
     after_claim = client.get(tag_prefix + claim)
     after_ref = client.get(tag_prefix + claim + "-run-" + str(run_id))
+    after_refs = client.get(refs_path)
     _must(_pr_identity(after_pr) == _pr_identity(pr) and
           _run_identity(after_run) == _run_identity(run) and
-          after_claim == claim_ref and after_ref == run_ref,
-          "Source PR, run, or immutable ledger changed during collection")
+          after_claim == claim_ref and after_ref == run_ref and
+          isinstance(after_refs, list) and len(after_refs) == 1 and
+          after_refs[0] == refs[0],
+          "Source PR, run, or complete run-ID ledger changed during collection")
     return verified
 
 
