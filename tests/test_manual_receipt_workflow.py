@@ -58,11 +58,11 @@ def validate(text):
             "clean git initialization")
     require(text.count("run: python controller/receipt_collector.py") == 1,
             "run reviewed GET-only collector exactly once")
-    require("GH_TOKEN: \${{ github.token }}" in text,
+    require("GH_TOKEN: ${{ github.token }}" in text,
             "job-scoped token")
     for input_name, env_name in (("pr_number", "PR"), ("head_sha", "HEAD_SHA"),
                                  ("base_sha", "BASE_SHA")):
-        require(f"ROMARR_SELECTED_{env_name}: \${{{{ inputs.{input_name} }}}}" in text,
+        require(f"ROMARR_SELECTED_{env_name}: ${{{{ inputs.{input_name} }}}}" in text,
                 "pinned selection via environment")
         require(re.search(rf"(?m)^      {input_name}:\s*$", text) is not None,
                 "required workflow input")
@@ -106,7 +106,7 @@ class ManualReceiptWorkflow(unittest.TestCase):
     def test_reject_shell_input_interpolation(self):
         with self.assertRaisesRegex(ValueError, "only reviewed existing|untrusted expressions"):
             validate(self.source.replace("run: python controller/receipt_collector.py",
-                                         "run: python controller/receipt_collector.py \${{ inputs.pr_number }}"))
+                                         "run: python controller/receipt_collector.py ${{ inputs.pr_number }}"))
 
     def test_reject_extra_action(self):
         with self.assertRaisesRegex(ValueError, "only reviewed pinned actions"):
