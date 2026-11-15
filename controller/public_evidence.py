@@ -125,10 +125,13 @@ def inspect(path, *, repository: str, head: str, base: str, scope: str):
                 or cases_doc.get("scope") != scope):
             raise EvidenceError("Controller source or case identity mismatch")
         observed = _cases(cases_doc.get("cases"), official=False)
+        run_id, run_attempt = summary.get("run_id"), summary.get("run_attempt")
         if (not _counts_match(cases_doc.get("counts"), observed) or not _counts_match(summary.get("counts"), observed)
                 or observed["failed"] or observed["errors"]
-                or cases_doc.get("run_id") != summary.get("run_id")
-                or cases_doc.get("run_attempt") != summary.get("run_attempt")
+                or not isinstance(run_id, str) or not run_id.strip() or len(run_id) > 64
+                or not isinstance(run_attempt, str) or not run_attempt.strip() or len(run_attempt) > 64
+                or cases_doc.get("run_id") != run_id
+                or cases_doc.get("run_attempt") != run_attempt
                 or summary.get("pytest_exit_code") != 0
                 or any(summary.get(key) != "PASS" for key in ("test_status", "environment_status", "collection_status"))):
             raise EvidenceError("Controller test or case gate incomplete")
