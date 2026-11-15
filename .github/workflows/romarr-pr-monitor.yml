@@ -1,7 +1,8 @@
 name: ROMarr PR and CodeRabbit read-only monitor
 
-# Stage 3A: metadata only. No claim tags, workflow dispatch or source writes.
-# The separate Stage 2C manual exact-target workflow remains unchanged.
+# Offline Stage 5 candidate only. Hosted Stage 4A was accepted on Nov 15.
+# Existing metadata-only monitor is retained. One already-claimed exact receipt
+# may be independently verified, with no GitHub writes or pytest dispatch.
 on:
   schedule:
     - cron: '2-59/5 * * * *'
@@ -9,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: romarr-pr-monitor-readonly
@@ -20,6 +22,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      actions: read
     steps:
       - name: Checkout controller default branch
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -41,11 +44,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python controller/status.py audit > "$RUNNER_TEMP/romarr-status.json"
-      - name: Render sanitized metadata summary
-        run: python controller/monitor_summary.py "$RUNNER_TEMP/romarr-status.json" > "$RUNNER_TEMP/romarr-monitor-summary.md"
-      - name: Publish sanitized metadata summary
+      - name: Inspect one existing exact-source receipt (GET-only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python controller/scheduled_receipt.py audit "$RUNNER_TEMP/romarr-status.json" > "$RUNNER_TEMP/romarr-receipt.json"
+      - name: Finalize sanitized summary or safe incomplete-status fallback
+        if: ${{ !cancelled() }}
+        run: python controller/scheduled_receipt.py finalize "$RUNNER_TEMP/romarr-status.json" "$RUNNER_TEMP/romarr-receipt.json" "$RUNNER_TEMP/romarr-monitor-summary.md"
+      - name: Publish sanitized metadata and receipt summary
+        if: ${{ !cancelled() }}
         run: cat "$RUNNER_TEMP/romarr-monitor-summary.md" >> "$GITHUB_STEP_SUMMARY"
       - name: Retain sanitized summary only (7 days)
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0, Node.js 24
         with:
           name: romarr-monitor-summary-${{ github.run_id }}-${{ github.run_attempt }}
