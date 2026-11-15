@@ -122,14 +122,27 @@ def verify_runtime(source: Path, target: dict):
     return node.stdout.strip()
 
 
+def pytest_environment():
+    """Exclude inherited credentials, runner command files, and Git overrides.
+
+    This reduces accidental exposure to ROMarr test code; it is not an
+    isolation boundary against malicious code sharing the GitHub runner.
+    """
+    blocked_names = {"GITHUB_ENV", "GITHUB_PATH", "GITHUB_OUTPUT", "GITHUB_STEP_SUMMARY"}
+    blocked_prefixes = ("GIT_", "ACTIONS_")
+    blocked_fragments = ("TOKEN", "SECRET", "PASSWORD", "CREDENTIAL")
+    return {
+        key: value for key, value in os.environ.items()
+        if key.upper() not in blocked_names
+        and not key.upper().startswith(blocked_prefixes)
+        and not any(fragment in key.upper() for fragment in blocked_fragments)
+    }
+
+
 def launch_pytest(source: Path, private: Path, args: list[str]):
     raw_log = private / "pytest.log"
     junit = private / "junit.xml"
-    env = dict(os.environ)
-    # Never pass any API, artifact, OIDC, or checkout credentials into PR code.
-    for name in tuple(env):
-        if name in ("GH_TOKEN", "GITHUB_TOKEN", "ACTIONS_RUNTIME_TOKEN", "ACTIONS_ID_TOKEN_REQUEST_TOKEN"):
-            env.pop(name, None)
+    env = pytest_environment()
     started = time.monotonic()
     timed_out = False
     command = [sys.executable, "-m", "pytest", *args, "-q", f"--junitxml={junit}"]
