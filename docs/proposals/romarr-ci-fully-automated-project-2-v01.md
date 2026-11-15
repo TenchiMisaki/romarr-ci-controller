@@ -4,7 +4,7 @@
 
 ## Goal and boundaries
 
-I want to replace routine manual Windows/SSH ROMarr source-test coordination with a GitHub-hosted controller that can follow a change from discovery through testing, review and permitted follow-up. It should do that against an **exact source revision**, produce evidence that can be independently checked, and keep the existing CT107 native test path available until the hosted replacement is genuinely accepted.
+I want to replace routine manual Windows/SSH ROMarr source-test coordination with a GitHub-hosted controller that can follow a change from discovery through testing, review and permitted follow-up. It should do that against an **exact source revision**, produce evidence that can be independently checked, and retain a separate, owner-controlled manual test fallback until the hosted replacement is independently accepted.
 
 The intended loop is:
 
@@ -78,7 +78,7 @@ Build stateful monitoring of the actual CodeRabbit check, reviewed SHA, complete
 
 For a material finding, trace real code and callers; distinguish confirmed source defects from review mistakes, platform/test-environment problems and evidence-collection failures. Under existing fork-only authority, make the smallest change in an isolated branch, run the affected and broader tests justified by the risk, and request review on the final SHA. Preserve the tested source identity and do not automatically promote an upstream-connected branch.
 
-**Not authorized by this stage:** new official upstream PRs/comments, upstream-connected branch promotion, automatic merge, deployment or protected Homelab documentation publication. Those remain independent owner gates.
+**Not authorized by this stage:** new official upstream PRs/comments, upstream-connected branch promotion, automatic merge, deployment or protected documentation publication. Those remain independent owner gates.
 
 ### Stage 8 — Decision engine, alerts and recovery (Phase D)
 
@@ -86,7 +86,7 @@ Keep a durable record for each immutable revision: TEST, COLLECTION, ENVIRONMENT
 
 Continue from verified states—new revision, pending run, completed receipt, failed test, real review finding, corrected head or rate limit—without repeating work or acting on stale data. Test missed-run and failed-job alerts, actual notification delivery, native/fallback collision avoidance, restart persistence, credential expiry/renewal, interrupted claims, API failures, disarm/rollback and artifact retention. A configured timer, successful dispatch or one happy-path receipt is not full operational acceptance.
 
-Keep the installed CT107 native on-demand test/recovery path as a **manual fallback** until the hosted workflow is accepted as primary. Retire only genuinely redundant manual work after separate owner approval and proof.
+Keep an existing, independently operated test/recovery path available as a **manual fallback** until the hosted workflow is accepted as primary. Retire only genuinely redundant manual work after separate owner approval and proof.
 
 ## Related coverage and supporting evidence
 
@@ -102,6 +102,6 @@ The controller handles source-level CI and review evidence. Docker image/platfor
 
 ## Resume work safely
 
-Before continuing, review this backlog, [controller README](https://github.com/TenchiMisaki/romarr-ci-controller/blob/main/README.md), [VALIDATION.md](https://github.com/TenchiMisaki/romarr-ci-controller/blob/main/VALIDATION.md), the applicable Homelab `00`, `10`, `50`, `60` and `70` references, current GitHub Actions jobs and CodeRabbit reviews, and the relevant ROMarr `AGENTS.md` for source work. Reconcile the actual controller `main`, personal-fork branches, target PR head/base and claim/run identities. Previous green tests belong to their exact revisions, not a later moving head.
+Before continuing, review this backlog, [controller README](https://github.com/TenchiMisaki/romarr-ci-controller/blob/main/README.md), [VALIDATION.md](https://github.com/TenchiMisaki/romarr-ci-controller/blob/main/VALIDATION.md), applicable repository `AGENTS.md`, and current source, GitHub Actions jobs and CodeRabbit reviews. Reconcile the controller's current `main` revision, relevant fork branches, target PR head/base SHAs and claim/run identities. Previous green tests belong to their exact revisions, not a later moving head.
 
 **Start with the unfinished native Stage 5 schedule acceptance and Stage 6 isolation/design**, without repeating accepted source tests or silently enabling more privileged automation. Stop only at the real security, owner-controlled GitHub, upstream or production boundaries.
