@@ -1,6 +1,14 @@
 # Validation receipt — controller v01
 
-**Current status (November 14, 2026): Stage 2B manual watcher and PR #5 full pytest acceptance remain PASS. Stage 2C exact single-PR selection was merged in PR #6, with 128 controller unit tests PASS. A new live v2 dispatch remains NOT TESTED. Stage 3A read-only scheduled monitoring was merged in controller PR #7 and is configured on `main`; the first scheduled execution and notification behavior remain NOT VERIFIED. Unattended test dispatch and automatic CodeRabbit follow-through are NOT ACCEPTED. Historical entries retain their original evidence.**
+**Current status (November 14, 2026 PST): The existing Stage 3 read-only monitor completed a first owner-operated external systemd fallback invocation successfully in [run #43666803171](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43666803171). The Github-native schedule remains unverified (no `schedule` runs observed). First-run dispatch, job and artifact acceptance are PASS; a second timer firing, reboot persistence, and unattended pytest/CodeRabbit remediation are NOT TESTED or NOT ACCEPTED. Earlier entries are dated historical records.**
+
+## Owner-operated external scheduler — first end-to-end acceptance (November 14, 2026 PST)
+
+- **Scope:** Owner-reported native Linux systemd installation, for the standalone controller's existing **read-only** monitor only. No new controller code, ROMarr source changes, pytest dispatch, CodeRabbit actions, or production deployment.
+- **Owner execution evidence:** Native installer `Install` returned status `0`, enabled the systemd timer, and scheduled its initial activation for `2026-11-15 02:14 UTC`. `Verify` returned status `0` and showed `ActiveState=active`, `UnitFileState=enabled`, `LastTriggerUSec=2026-11-15 02:14:03 UTC`, and systemd journal entries `DISPATCH_REQUEST` at 02:14:04 and `DISPATCH_ACCEPTED HTTP_200 run_id=43666803171` at 02:14:05. These are owner-provided guest logs, not independent remote console access.
+- **Independent GitHub readback:** [monitor #43666803171](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43666803171), `workflow_dispatch`, created `2026-11-15 02:14:05 UTC`, controller commit `5179114b8931e4e22c9d4e338de18a66cb2d3c12`, completed `success`; inspect job and all steps `success`. Sanitized artifact `romarr-monitor-summary-43666803171-1` (ID `14142232913`, 722 bytes) uploaded for seven-day retention.
+- **Status:** First external scheduler dispatch and GitHub job/artifact **PASS**. GitHub's own `schedule` event **NOT VERIFIED** (none seen). The local five-minute timer has a nine-minute recent-run guard, so the first next tick should skip; independent second tick/deduplication, next eligible dispatch, reboot survival, credential rotation, missed-run alerting, and recovery remain **NOT TESTED**.
+- **Security:** The external dispatcher stores its own repository-restricted GitHub credential outside this public repository. No credential, private hostname, IP, guest ID, unit journal, or other private infrastructure detail is published here.
 
 ## Source-derived design checks
 

@@ -1,8 +1,18 @@
 # ROMarr GitHub pytest controller — staged CI orchestration
 
-**Current status (November 14, 2026): Stage 2B manual watcher accepted; Stage 2C exact single-PR targeting merged via PR #6 with 128 controller tests PASS. A real v2 watcher dispatch remains NOT TESTED. Stage 3A read-only scheduled PR/CodeRabbit monitoring was merged via PR #7 and is configured on controller main; its first scheduled execution remains NOT VERIFIED. Autonomous testing and code fixes are NOT ACCEPTED.**
+**Current status (November 14, 2026 PST): The Stage 3 read-only monitoring workflow is installed on controller main. The owner-operated external systemd fallback first triggered and completed the existing monitor successfully in run #43666803171. GitHub-native `schedule` event delivery has not been observed; the fallback's first end-to-end invocation is accepted, but consecutive executions and reboot persistence remain unverified. A new v2 pytest watcher dispatch and autonomous code fixes remain NOT ACCEPTED.**
 
 This is a separate **public** GitHub repository to host ROMarr test orchestration. It does **not** modify `TenchiMisaki/romarr`, `BlizzHacker/romarr`, any separate fork-sync automation, any private infrastructure, or production Docker services. The original v01 baseline had no scheduler or deployment authority; Stage 3A adds a separate, read-only scheduled metadata workflow, not an automatic source writer or pytest dispatcher.
+
+## Current read-only monitor — first external fallback acceptance (November 14, 2026 PST)
+
+- GitHub's native five-minute `schedule` trigger is configured with `2-59/5 * * * *` on `main`, but GitHub run history has not recorded a schedule-triggered execution. Do not mistake `workflow_dispatch` for `schedule`.
+- An owner-operated Linux systemd timer now checks every five minutes and, if eligible, requests **only** `.github/workflows/romarr-pr-monitor.yml` through GitHub's dispatch API. Its current nine-minute recent-run guard means fallback-only dispatches are normally closer to ten minutes apart. The controller's existing read-only workflow and `main` source remain unchanged.
+- The first external run, [#43666803171](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43666803171), was created **2026-11-15 02:14:05 UTC** (November 14, 18:14:05 PST) on controller `5179114b8931e4e22c9d4e338de18a66cb2d3c12`. The owner-reported systemd journal independently showed a timer invocation at 02:14:03 UTC and `DISPATCH_ACCEPTED HTTP_200 run_id=43666803171`. GitHub readback confirmed job `inspect` and all steps SUCCESS.
+- The sanitized monitor artifact `romarr-monitor-summary-43666803171-1` (artifact ID `14142232913`, 722 bytes) was uploaded successfully and configured for seven-day retention. This is monitoring metadata, **not** evidence that a new pytest job ran, CodeRabbit findings were fixed, or any ROMarr source/deployment changed.
+- Acceptance boundaries: **first end-to-end external fallback run PASS**; local/remote second timer firing with expected duplicate skip **NOT YET VERIFIED**; later eligible dispatch, restart persistence, missed-run alerting, GitHub-native schedule reliability, and recovery **NOT TESTED**. Keep infrastructure identities, token contents, and private logs out of this public repository.
+
+Older Stage 1–3 development sections below are preserved as dated historical evidence; their prior "scheduler not installed" statements describe earlier milestones rather than the current external fallback.
 
 ## Why a separate repo
 
