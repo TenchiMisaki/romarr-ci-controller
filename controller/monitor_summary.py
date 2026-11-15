@@ -72,6 +72,40 @@ def next_test_candidate(records):
             "count": len(ordered)}
 
 
+def attention_status(test_status, review_status, findings):
+    """Show remaining evidence and review work without asserting test acceptance.
+
+    Only validated machine statuses enter this function. Both pytest and review
+    gaps must remain visible when they coexist; the public summary cannot
+    independently attest to private pytest artifacts or a ready-to-merge PR.
+    """
+    review_attention = (
+        "Review findings/threads"
+        if review_status == "UNRESOLVED_THREADS" or findings == "UNKNOWN_OR_ACTIONABLE"
+        else "Verify review"
+        if review_status != "REVIEW_READY" or findings != "NO_NEW_ACTIONABLE"
+        else None
+    )
+    if test_status in ("NOT_DISPATCHED", "BASE_CHANGED_RETEST_REQUIRED"):
+        test_attention = "New pytest revision (dispatch not authorized)"
+    elif test_status == "LEGACY_BASE_ATTESTED_HISTORICAL":
+        test_attention = "Historical pytest; verify required scope"
+    elif test_status == "IN_PROGRESS":
+        test_attention = "Pytest running; verify completion"
+    elif test_status in (
+        "WORKFLOW_SUCCESS_ARTIFACT_PRESENT_CONTENTS_UNVERIFIED",
+        "WORKFLOW_SUCCESS_ARTIFACT_UNVERIFIED",
+    ):
+        test_attention = "Verify pytest artifact contents"
+    elif test_status in ("CLAIM_WITHOUT_UNIQUE_RUN", "LEGACY_CLAIM_RECONCILE"):
+        test_attention = "Reconcile claim/run ledger; no retry"
+    elif test_status.startswith("WORKFLOW_"):
+        test_attention = "Investigate pytest workflow outcome"
+    else:
+        test_attention = "Verify pytest state"
+    return "; ".join(part for part in (review_attention, test_attention) if part)
+
+
 def render(report):
     """Return a sanitized read-only status table, never a test-pass attestation."""
     if not isinstance(report, dict) or report.get("mode") != "read_only" or report.get("source") != SOURCE:
@@ -119,10 +153,7 @@ def render(report):
         unresolved = review.get("unresolved_threads")
         if unresolved is not None and (isinstance(unresolved, bool) or not isinstance(unresolved, int) or unresolved < 0):
             raise SummaryError("Invalid unresolved thread count")
-        attention = ("Review findings/threads" if review_status == "UNRESOLVED_THREADS" or
-                     findings == "UNKNOWN_OR_ACTIONABLE" else
-                     "Verify review" if review_status != "REVIEW_READY" else
-                     "None from metadata")
+        attention = attention_status(test_status, review_status, findings)
         lines.append(f"| [#{number}](https://github.com/{SOURCE}/pull/{number}) | `{head[:8]}` / `{base[:8]}` | {test_status} | {review_status} | {attention} |")
     if not records:
         lines.append("| — | — | No eligible PRs | — | — |")
