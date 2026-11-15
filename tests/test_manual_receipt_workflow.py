@@ -20,11 +20,23 @@ def validate(text):
             raise ValueError(label)
 
     require(text.count("\non:\n") == 1, "one explicit event map")
-    require(re.search(r"(?m)^  workflow_dispatch:\s*$", text) is not None,
-            "manual trigger")
-    for forbidden_event in ("schedule", "push", "pull_request", "workflow_call", "repository_dispatch"):
-        require(re.search(rf"(?m)^  {forbidden_event}:\s*$", text) is None,
-                "unexpected trigger")
+    # This workflow is intentionally fixed-format. Reject any second event,
+    # including YAML inline values (e.g. ``push: {}``) rather than trying to
+    # enumerate every possible automatic trigger spelling.
+    lines = text.splitlines()
+    require(lines.count("on:") == 1, "exact event map")
+    event_start = lines.index("on:") + 1
+    event_keys = []
+    for line in lines[event_start:]:
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if not line.startswith((" ", "\t")):
+            break
+        require(not line.startswith("\t"), "unexpected event indentation")
+        if line.startswith("  ") and not line.startswith("   "):
+            event_keys.append(line)
+    require(event_keys == ["  workflow_dispatch:"],
+            "unexpected trigger")
     require(text.count("permissions:\n  contents: read\n  actions: read") == 1,
             "global least-privilege permission")
     require(text.count("    permissions:\n      contents: read\n      actions: read") == 1,
@@ -43,7 +55,21 @@ def validate(text):
     require(uses == [f"actions/checkout@{CHECKOUT} # v5",
                      f"actions/setup-python@{SETUP_PYTHON} # v6"],
             "only reviewed pinned actions")
-    runs = re.findall(r"(?m)^\s+run: ([^\n]+)$", text)
+    # Fail closed on YAML block scalars or folded shell continuations: a
+    # first-line-only regex could otherwise approve a second executable command.
+    runs = []
+    for index, line in enumerate(lines):
+        found = re.match(r"^( +)run\s*:\s*(.*)$", line)
+        if found is None:
+            continue
+        run_indent = len(found.group(1))
+        for following in lines[index + 1:]:
+            if not following.strip():
+                continue
+            follow_indent = len(following) - len(following.lstrip(" "))
+            require(follow_indent <= run_indent, "multiline shell continuation")
+            break
+        runs.append(found.group(2))
     require(runs == ["python controller/receipt_collector.py"],
             "only reviewed existing read-only collector command")
     require(f"uses: actions/checkout@{CHECKOUT}" in text,
@@ -90,6 +116,17 @@ class ManualReceiptWorkflow(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unexpected trigger"):
             validate(self.source.replace("  workflow_dispatch:",
                                          "  schedule:\n    - cron: '* * * * *'\n  workflow_dispatch:"))
+
+    def test_reject_inline_automatic_trigger(self):
+        with self.assertRaisesRegex(ValueError, "unexpected trigger"):
+            validate(self.source.replace("  workflow_dispatch:",
+                                         "  push: {}\n  workflow_dispatch:"))
+
+    def test_reject_yaml_folded_shell_continuation(self):
+        with self.assertRaisesRegex(ValueError, "multiline shell continuation"):
+            validate(self.source.replace("run: python controller/receipt_collector.py",
+                                         "run: python controller/receipt_collector.py\n"
+                                         "          && python -m pytest"))
 
     def test_reject_write_scope(self):
         with self.assertRaisesRegex(ValueError, "least-privilege"):
