@@ -100,3 +100,9 @@ The scheduled read-only summary now also evaluates its already-collected status 
 **Scope:** the candidate is purely informational in the GitHub job summary. It **does not** add GitHub permissions, workflow triggers, dispatches, claim tags, review comments, source changes or production actions. The separate accepted Stage 2C manual watcher remains the only write-capable dispatch path; new live v2 acceptance is still pending.
 
 **Stage 3B publication verification:** [Controller PR #8](https://github.com/TenchiMisaki/romarr-ci-controller/pull/8) merged as `0599bdb3ce02d37872a4500d75ccef99ef87ef80` after [exact-head CI #43655735111](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43655735111) passed **154 controller unit tests / 0 failures**. Source and PR merge were independently read back. No new v2 test dispatch, claim or scheduled monitor run was observed at that check; no controller CodeRabbit review/check was available.
+
+## Stage 3C — Durable sanitized monitor evidence (candidate, November 14, 2026)
+
+The scheduled read-only monitor now renders its already validated Markdown summary to a temporary file, publishes that **same sanitized file** as a GitHub job summary, and uploads only `romarr-monitor-summary.md` using the existing pinned Node.js 24 artifact action. The public artifact is named by GitHub run ID/attempt and retained for **7 days**; raw JSON API metadata, private JUnit/logs, review comment text and source files are not uploaded. A failed render stops the job before publication or upload. This changes no workflow trigger or permission, and no source/test dispatch occurs.
+
+**Verification boundary:** candidate source requires exact-head GitHub Actions unit acceptance; only a later real monitor run with independently inspected job steps and artifact can establish actual scheduled execution and retention. GitHub may delay or omit a scheduled invocation. This is not an alert service or autonomous code correction.
