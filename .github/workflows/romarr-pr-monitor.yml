@@ -41,5 +41,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python controller/status.py audit > "$RUNNER_TEMP/romarr-status.json"
+      - name: Render sanitized metadata summary
+        run: python controller/monitor_summary.py "$RUNNER_TEMP/romarr-status.json" > "$RUNNER_TEMP/romarr-monitor-summary.md"
       - name: Publish sanitized metadata summary
-        run: python controller/monitor_summary.py "$RUNNER_TEMP/romarr-status.json" >> "$GITHUB_STEP_SUMMARY"
+        run: cat "$RUNNER_TEMP/romarr-monitor-summary.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain sanitized summary only (7 days)
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0, Node.js 24
+        with:
+          name: romarr-monitor-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/romarr-monitor-summary.md
+          if-no-files-found: error
+          retention-days: 7

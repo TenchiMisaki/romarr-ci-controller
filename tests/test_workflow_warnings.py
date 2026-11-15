@@ -35,7 +35,7 @@ class WorkflowWarnings(unittest.TestCase):
                     self.assertIn("GIT_CONFIG_VALUE_0: main", following)
 
     def test_public_artifact_smoke_and_pytest_use_node24_action(self):
-        for name in ("controller-unit-tests.yml", "romarr-pytest.yml"):
+        for name in ("controller-unit-tests.yml", "romarr-pytest.yml", "romarr-pr-monitor.yml"):
             source = (ROOT / name).read_text(encoding="utf-8")
             with self.subTest(workflow=name):
                 self.assertIn("actions/upload-artifact@" + UPLOAD_SHA, source)
@@ -63,6 +63,30 @@ class WorkflowWarnings(unittest.TestCase):
         self.assertNotIn("ROMARR_WATCH_DISPATCH", source)
         self.assertNotIn("python controller/watch.py dispatch", source)
         self.assertNotRegex(source, r"(?m)^\s*push:\s*$")
+
+
+    def test_monitor_retains_only_sanitized_seven_day_evidence(self):
+        source = (ROOT / "romarr-pr-monitor.yml").read_text(encoding="utf-8")
+        self.assertIn('run: python controller/monitor_summary.py "$RUNNER_TEMP/romarr-status.json" > "$RUNNER_TEMP/romarr-monitor-summary.md"', source)
+        self.assertIn('run: cat "$RUNNER_TEMP/romarr-monitor-summary.md" >> "$GITHUB_STEP_SUMMARY"', source)
+        self.assertEqual(source.count("uses: actions/upload-artifact@" + UPLOAD_SHA), 1)
+        self.assertIn('path: ${{ runner.temp }}/romarr-monitor-summary.md', source)
+        self.assertIn('if-no-files-found: error', source)
+        self.assertIn('retention-days: 7', source)
+        self.assertNotIn('path: ${{ runner.temp }}/romarr-status.json', source)
+        self.assertNotIn('actions: write', source)
+        self.assertNotIn('contents: write', source)
+
+    def test_monitor_summary_is_rendered_before_publication_or_upload(self):
+        source = (ROOT / "romarr-pr-monitor.yml").read_text(encoding="utf-8")
+        render = source.index("      - name: Render sanitized metadata summary")
+        publish = source.index("      - name: Publish sanitized metadata summary")
+        retain = source.index("      - name: Retain sanitized summary only (7 days)")
+        self.assertLess(render, publish)
+        self.assertLess(publish, retain)
+        self.assertEqual(source.count("romarr-monitor-summary.md"), 3)
+        self.assertNotIn("continue-on-error: true", source)
+        self.assertNotIn("if: always()", source)
 
 
 if __name__ == "__main__":
