@@ -35,8 +35,48 @@ class Render(unittest.TestCase):
         rendered = m.render(report([record()]))
         self.assertIn("LEGACY_BASE_ATTESTED_HISTORICAL", rendered)
         self.assertIn("REVIEW_READY", rendered)
-        self.assertIn("None from metadata", rendered)
+        self.assertIn("Historical pytest; verify required scope", rendered)
+        self.assertNotIn("None from metadata", rendered)
         self.assertIn("`aaaaaaaa` / `bbbbbbbb`", rendered)
+
+    def test_unclaimed_revision_is_not_hidden_by_review_ready(self):
+        item = record()
+        item["pytest"] = {"status": "NOT_DISPATCHED"}
+        rendered = m.render(report([item]))
+        self.assertIn("New pytest revision (dispatch not authorized)", rendered)
+        self.assertNotIn("None from metadata", rendered)
+
+    def test_artifact_metadata_is_not_artifact_verification(self):
+        item = record()
+        item["pytest"] = {"status": "WORKFLOW_SUCCESS_ARTIFACT_PRESENT_CONTENTS_UNVERIFIED"}
+        rendered = m.render(report([item]))
+        self.assertIn("Verify pytest artifact contents", rendered)
+        self.assertNotIn("None from metadata", rendered)
+
+    def test_claim_without_ledger_is_not_automatically_retried(self):
+        item = record()
+        item["pytest"] = {"status": "CLAIM_WITHOUT_UNIQUE_RUN"}
+        rendered = m.render(report([item]))
+        self.assertIn("Reconcile claim/run ledger; no retry", rendered)
+
+    def test_failed_pytest_workflow_is_not_hidden_by_review_ready(self):
+        item = record()
+        item["pytest"] = {"status": "WORKFLOW_FAILURE"}
+        rendered = m.render(report([item]))
+        self.assertIn("Investigate pytest workflow outcome", rendered)
+
+    def test_review_findings_and_pytest_gap_both_remain_visible(self):
+        item = record(review_status="UNRESOLVED_THREADS",
+                      findings="UNKNOWN_OR_ACTIONABLE", threads=2)
+        rendered = m.render(report([item]))
+        self.assertIn("Review findings/threads; Historical pytest", rendered)
+
+    def test_unknown_pytest_status_never_claims_no_attention(self):
+        item = record()
+        item["pytest"] = {"status": "UNKNOWN_TEST_STATE"}
+        rendered = m.render(report([item]))
+        self.assertIn("Verify pytest state", rendered)
+        self.assertNotIn("None from metadata", rendered)
 
     def test_unresolved_threads_need_attention(self):
         rendered = m.render(report([record(review_status="UNRESOLVED_THREADS",
