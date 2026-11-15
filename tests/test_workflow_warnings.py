@@ -52,7 +52,9 @@ class WorkflowWarnings(unittest.TestCase):
     def test_scheduled_monitor_is_read_only(self):
         source = (ROOT / "romarr-pr-monitor.yml").read_text(encoding="utf-8")
         self.assertIn("  schedule:", source)
-        self.assertIn("cron: '17,47 * * * *'", source)
+        self.assertIn("cron: '2-59/5 * * * *'", source)
+        self.assertEqual(source.count("cron:"), 1)
+        self.assertNotIn("cron: '17,47 * * * *'", source)
         self.assertIn("permissions:\n  contents: read", source)
         self.assertIn("      contents: read", source)
         self.assertIn("python controller/watch.py audit", source)
