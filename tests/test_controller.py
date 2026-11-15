@@ -148,6 +148,53 @@ class EvidenceTests(unittest.TestCase):
         self.write("abc123")
         self.assertNotEqual(first, evidence.digest(self.path))
 
+    def test_pytest_environment_filters_credentials_and_runner_overrides(self):
+        """Reject inherited sensitive names while retaining required test inputs."""
+        sample = {
+            "GH_TOKEN": "sentinel", "GITHUB_TOKEN": "sentinel",
+            "ACTIONS_RUNTIME_TOKEN": "sentinel", "PRIVATE_PASSWORD": "sentinel",
+            "SERVICE_SECRET_KEY": "sentinel", "OTHER_CREDENTIAL_FILE": "sentinel",
+            "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "core.hooksPath",
+            "GITHUB_ENV": "/tmp/github-env", "GITHUB_PATH": "/tmp/github-path",
+            "GITHUB_OUTPUT": "/tmp/github-output",
+            "GITHUB_STEP_SUMMARY": "/tmp/github-summary",
+            "ROMARR_ARCHIVE_ORG_PLUGIN_SOURCE": "/tmp/fixture",
+            "PYTEST_KEEP_ME": "present",
+        }
+        with patch.dict(os.environ, sample, clear=False):
+            child = evidence.pytest_environment()
+        for blocked in sample:
+            if blocked not in ("ROMARR_ARCHIVE_ORG_PLUGIN_SOURCE", "PYTEST_KEEP_ME"):
+                with self.subTest(blocked=blocked):
+                    self.assertNotIn(blocked, child)
+        self.assertEqual(child["ROMARR_ARCHIVE_ORG_PLUGIN_SOURCE"], "/tmp/fixture")
+        self.assertEqual(child["PYTEST_KEEP_ME"], "present")
+
+    def test_actual_pytest_child_cannot_read_injected_secret_environment(self):
+        """Confirm the actual pytest subprocess receives only permitted values."""
+        source = Path(self.temp.name) / "credentials"
+        source.mkdir()
+        (source / "test_example.py").write_text(
+            "import os\\n"
+            "def test_environment():\\n"
+            "    for key in ('GH_TOKEN', 'PRIVATE_PASSWORD', 'SERVICE_SECRET_KEY', "
+            "'OTHER_CREDENTIAL_FILE', 'GIT_CONFIG_COUNT', 'GITHUB_ENV', 'GITHUB_OUTPUT'):\\n"
+            "        assert key not in os.environ\\n"
+            "    assert os.environ['ROMARR_ARCHIVE_ORG_PLUGIN_SOURCE'] == '/tmp/fixture'\\n",
+            encoding="utf-8",
+        )
+        with patch.dict(os.environ, {
+            "GH_TOKEN": "sentinel", "PRIVATE_PASSWORD": "sentinel",
+            "SERVICE_SECRET_KEY": "sentinel", "OTHER_CREDENTIAL_FILE": "sentinel",
+            "GIT_CONFIG_COUNT": "1", "GITHUB_ENV": "/tmp/github-env",
+            "GITHUB_OUTPUT": "/tmp/github-output",
+            "ROMARR_ARCHIVE_ORG_PLUGIN_SOURCE": "/tmp/fixture",
+        }, clear=False):
+            code, timed_out, _, _, junit_path = evidence.launch_pytest(
+                source, source, ["test_example.py"])
+        counts, _ = evidence.collect_junit(junit_path)
+        self.assertEqual((code, timed_out, counts["passed"]), (0, False, 1))
+
     def test_actual_pytest_success(self):
         source = Path(self.temp.name) / "positive"
         source.mkdir()
