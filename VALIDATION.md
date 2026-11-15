@@ -106,3 +106,9 @@ At [full pytest run #43648554384](https://github.com/TenchiMisaki/romarr-ci-cont
 - This is **advisory scheduling output only**. No automatic workflow dispatch, repo-token write authorization, CodeRabbit correction or live v2 claim is implemented by the change.
 
 - **Final publication:** [Controller PR #8](https://github.com/TenchiMisaki/romarr-ci-controller/pull/8) squash-merged to `main` as `0599bdb3ce02d37872a4500d75ccef99ef87ef80` from exact head `c9d3893c24a64fd313a573254cddd2cd74193023`. [CI #43655735111](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43655735111) ran **154/154 controller unit tests PASS** including 12 new queue-selection tests, plus compilation, artifact smoke and read-only API reporting. No controller CodeRabbit review was available. **First scheduled monitor execution: NOT VERIFIED; write-capable scheduled dispatch and a new live v2 run: NOT TESTED.** No ROMarr source or production changes occurred.
+
+## Stage 3C sanitized monitor evidence candidate — November 14, 2026
+
+- The controller-only scheduled monitor changes from direct `GITHUB_STEP_SUMMARY` redirection to a single fail-closed rendered `romarr-monitor-summary.md`, then copies that exact sanitized Markdown to the GitHub job summary and uploads only that file for **7-day** retention with the same GitHub Actions `upload-artifact@v6.0.0` SHA already accepted by the controller unit CI.
+- Added static regressions for exact artifact target/path, SHA pinning, rendered-before-upload ordering, nonpublication of raw status JSON, and unchanged read-only permissions/no push/no write/dispatch.
+- The changed workflow's actual scheduled execution and uploaded artifact content/hash remain **NOT TESTED** until a real GitHub run completes. A successful source CI run is not equivalent to a successfully executed scheduled monitor, nor proof of notification delivery, unattended pytest or CodeRabbit fixes.
