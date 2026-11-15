@@ -125,6 +125,23 @@ class EvidenceContract(unittest.TestCase):
         with self.assertRaises(EvidenceError):
             self.verify(archive(False,mutate=lambda docs:docs["testcases.json"].__setitem__("run_id","43")),False)
 
+    def test_reported_pass_with_failed_or_error_cases_is_rejected(self):
+        """A forged PASS cannot override counted failed or errored test cases."""
+        for official in (True, False):
+            for outcome in ("failed", "error" if official else "errors"):
+                def contradict(docs):
+                    key = "cases.json" if official else "testcases.json"
+                    cases = docs[key] if official else docs[key]["cases"]
+                    cases[0]["outcome"] = outcome
+                    # Fixture count dict is intentionally shared between controller
+                    # summary and testcases; both must remain internally consistent.
+                    counts = docs["summary.json"]["counts"]
+                    counts["passed"] = 0
+                    counts[outcome] = 1
+                with self.subTest(official=official, outcome=outcome):
+                    with self.assertRaises(EvidenceError):
+                        self.verify(archive(official, mutate=contradict), official)
+
     def test_boolean_case_count_is_not_a_valid_integer(self):
         for official in (True, False):
             with self.subTest(official=official), self.assertRaises(EvidenceError):
