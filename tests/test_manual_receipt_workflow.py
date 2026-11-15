@@ -59,7 +59,7 @@ def validate(text):
     # first-line-only regex could otherwise approve a second executable command.
     runs = []
     for index, line in enumerate(lines):
-        found = re.match(r"^( +)run\s*:\s*(.*)$", line)
+        found = re.match(r"^( +)(?:-\s*)?run\s*:\s*(.*)$", line)
         if found is None:
             continue
         run_indent = len(found.group(1))
@@ -144,6 +144,10 @@ class ManualReceiptWorkflow(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "only reviewed existing|untrusted expressions"):
             validate(self.source.replace("run: python controller/receipt_collector.py",
                                          "run: python controller/receipt_collector.py ${{ inputs.pr_number }}"))
+
+    def test_reject_sequence_first_extra_run(self):
+        with self.assertRaisesRegex(ValueError, "only reviewed existing"):
+            validate(self.source + "\n      - run: python -m pytest\n")
 
     def test_reject_extra_action(self):
         with self.assertRaisesRegex(ValueError, "only reviewed pinned actions"):
