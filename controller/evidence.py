@@ -128,9 +128,9 @@ def pytest_environment():
     This reduces accidental exposure to ROMarr test code; it is not an
     isolation boundary against malicious code sharing the GitHub runner.
     """
-    blocked_names = {"GITHUB_ENV", "GITHUB_PATH", "GITHUB_OUTPUT", "GITHUB_STEP_SUMMARY"}
+    blocked_names = {"GITHUB_ENV", "GITHUB_PATH", "GITHUB_OUTPUT", "GITHUB_STEP_SUMMARY", "SSH_AUTH_SOCK"}
     blocked_prefixes = ("GIT_", "ACTIONS_")
-    blocked_fragments = ("TOKEN", "SECRET", "PASSWORD", "CREDENTIAL")
+    blocked_fragments = ("TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "API_KEY", "PRIVATE_KEY", "ACCESS_KEY")
     return {
         key: value for key, value in os.environ.items()
         if key.upper() not in blocked_names
