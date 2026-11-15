@@ -1,0 +1,126 @@
+name: ROMarr Stage 6 - Hosted two-job canary (MANUAL, NO PUBLICATION)
+
+# PRIVATE REVIEW CANDIDATE. Do not merge/activate until publication review.
+# This canary runs only a synthetic 1-case fixture, NEVER ROMarr PR source.
+# No artifact upload, GitHub API calls, scheduled triggers, or writes.
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Synthetic test result to verify across isolated runners
+        type: choice
+        options: [success, failure]
+        default: success
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: romarr-stage6-manual-canary-${{ github.ref }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  isolated_probe:
+    name: Synthetic pytest in unprivileged runner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions: {}
+    outputs:
+      case_outcomes: ${{ steps.probe.outputs.case_outcomes }}
+      pytest_exit: ${{ steps.probe.outputs.pytest_exit }}
+    steps:
+      - name: Run one synthetic pytest case without repository checkout
+        id: probe
+        shell: bash
+        env:
+          EXPECTED_SCENARIO: ${{ inputs.scenario }}
+        run: |
+          set -euo pipefail
+          umask 077
+          if [[ "$EXPECTED_SCENARIO" != success && "$EXPECTED_SCENARIO" != failure ]]; then
+            echo 'BLOCKED: invalid scenario' >&2
+            exit 1
+          fi
+          sandbox="$(mktemp -d "${RUNNER_TEMP}/stage6-fixture.XXXXXXXX")"
+          trap 'rm -rf -- "$sandbox"' EXIT
+          python3 -m venv "$sandbox/venv"
+          "$sandbox/venv/bin/python" -m pip --quiet install 'pytest==9.2.0'
+          printf '%s\n' 'def test_synthetic_isolation():' '    assert False' > "$sandbox/test_synthetic.py"
+          if [[ "$EXPECTED_SCENARIO" == success ]]; then
+            printf '%s\n' 'def test_synthetic_isolation():' '    assert True' > "$sandbox/test_synthetic.py"
+          fi
+          set +e
+          env -i HOME="$sandbox" TMPDIR="$sandbox" LANG=C.UTF-8 \
+            PATH="$sandbox/venv/bin:/usr/bin:/bin" PYTHONNOUSERSITE=1 \
+            PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+            "$sandbox/venv/bin/python" -m pytest -q -p no:cacheprovider \
+            --junitxml="$sandbox/private.xml" "$sandbox/test_synthetic.py" \
+            > "$sandbox/private.stdout" 2> "$sandbox/private.stderr"
+          raw_exit=$?
+          set -e
+          if [[ "$EXPECTED_SCENARIO" == success && "$raw_exit" != 0 ]]; then
+            echo 'BLOCKED: synthetic pytest success scenario failed' >&2
+            exit 1
+          fi
+          if [[ "$EXPECTED_SCENARIO" == failure && "$raw_exit" != 1 ]]; then
+            echo 'BLOCKED: expected pytest assertion failure was not observed' >&2
+            exit 1
+          fi
+          EXPECTED_EXIT="$raw_exit" EXPECTED_SCENARIO="$EXPECTED_SCENARIO" \
+          JUNIT_PATH="$sandbox/private.xml" python3 - <<'PYTHON'
+          import os, pathlib, re, xml.etree.ElementTree as ET
+          source = pathlib.Path(os.environ['JUNIT_PATH'])
+          if source.is_symlink() or not source.is_file() or not 0 < source.stat().st_size < 65536:
+              raise SystemExit('BLOCKED: private JUnit unavailable')
+          raw = source.read_bytes()
+          if re.search(rb'<!\s*(?:DOCTYPE|ENTITY)\b', raw, re.I):
+              raise SystemExit('BLOCKED: unsafe JUnit XML')
+          root = ET.fromstring(raw)
+          suites = [root] if root.tag == 'testsuite' else list(root) if root.tag == 'testsuites' else []
+          cases = [c for s in suites if s.tag == 'testsuite' for c in s if c.tag == 'testcase']
+          if len(cases) != 1:
+              raise SystemExit('BLOCKED: synthetic test count mismatch')
+          case = cases[0]
+          flags = [c.tag for c in case if c.tag in ('failure','error','skipped')]
+          if flags not in ([], ['failure']):
+              raise SystemExit('BLOCKED: unexpected pytest outcome shape')
+          actual = 'P' if not flags else 'F'
+          expected = 'P' if os.environ['EXPECTED_SCENARIO'] == 'success' else 'F'
+          if actual != expected or os.environ['EXPECTED_EXIT'] != ('0' if expected == 'P' else '1'):
+              raise SystemExit('BLOCKED: JUnit and raw exit disagree')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='ascii') as output:
+              output.write('case_outcomes=' + actual + '\n')
+              output.write('pytest_exit=' + os.environ['EXPECTED_EXIT'] + '\n')
+          print('Synthetic pytest: verified expected scenario; no private test logs exported')
+          PYTHON
+
+  isolated_reviewer:
+    name: Separate runner validates untrusted, anonymous handoff
+    needs: [isolated_probe]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Verify bounded output without source checkout or artifact upload
+        shell: bash
+        env:
+          UNTRUSTED_CASES: ${{ needs.isolated_probe.outputs.case_outcomes }}
+          UNTRUSTED_EXIT: ${{ needs.isolated_probe.outputs.pytest_exit }}
+          SOURCE_JOB_RESULT: ${{ needs.isolated_probe.result }}
+          EXPECTED_SCENARIO: ${{ inputs.scenario }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYTHON'
+          import os
+          scenario = os.environ['EXPECTED_SCENARIO']
+          cases = os.environ['UNTRUSTED_CASES']
+          raw_exit = os.environ['UNTRUSTED_EXIT']
+          result = os.environ['SOURCE_JOB_RESULT']
+          expected = {'success': ('P','0'), 'failure': ('F','1')}
+          if scenario not in expected or (cases,raw_exit) != expected[scenario] or result != 'success':
+              raise SystemExit('BLOCKED: cross-job handoff mismatch')
+          print('HOSTED_CANARY: cross-job handoff matches synthetic case and exit')
+          print('TEST_ACCEPTED: false')
+          print('PUBLICATION_AUTHORIZED: false')
+          print('PR_SOURCE_TESTED: false')
+          PYTHON
