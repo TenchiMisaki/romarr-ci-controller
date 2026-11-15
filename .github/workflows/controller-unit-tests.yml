@@ -50,7 +50,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python controller/watch.py audit
-      - name: Report current PR pytest and CodeRabbit state (read-only)
+      - name: Collect live PR pytest and CodeRabbit state (read-only)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python controller/status.py audit
+        run: python controller/status.py audit > "$RUNNER_TEMP/romarr-live-status.json"
+      - name: Smoke-test live sanitized monitor end-to-end (read-only)
+        run: |
+          python controller/monitor_summary.py "$RUNNER_TEMP/romarr-live-status.json" > "$RUNNER_TEMP/romarr-live-summary.md"
+          test -s "$RUNNER_TEMP/romarr-live-summary.md"
+          grep -Fq '## ROMarr PR monitor — read-only metadata' "$RUNNER_TEMP/romarr-live-summary.md"
+          grep -Fq '### Next potential pytest revision (advisory, no writes)' "$RUNNER_TEMP/romarr-live-summary.md"
+          printf 'LIVE_MONITOR_SANITIZED_SMOKE=PASS\n'

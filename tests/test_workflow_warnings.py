@@ -89,5 +89,28 @@ class WorkflowWarnings(unittest.TestCase):
         self.assertNotIn("if: always()", source)
 
 
+    def test_controller_pr_ci_runs_live_status_to_summary_smoke(self):
+        source = (ROOT / "controller-unit-tests.yml").read_text(encoding="utf-8")
+        self.assertIn("      - name: Collect live PR pytest and CodeRabbit state (read-only)", source)
+        self.assertIn('run: python controller/status.py audit > "$RUNNER_TEMP/romarr-live-status.json"', source)
+        self.assertIn('python controller/monitor_summary.py "$RUNNER_TEMP/romarr-live-status.json" > "$RUNNER_TEMP/romarr-live-summary.md"', source)
+        self.assertIn('test -s "$RUNNER_TEMP/romarr-live-summary.md"', source)
+        self.assertIn('LIVE_MONITOR_SANITIZED_SMOKE=PASS', source)
+        self.assertLess(source.index("      - name: Collect live PR pytest"),
+                        source.index("      - name: Smoke-test live sanitized monitor"))
+        self.assertIn("permissions:\n  contents: read", source)
+
+    def test_controller_pr_ci_never_uses_dispatch_or_uploads_raw_status(self):
+        source = (ROOT / "controller-unit-tests.yml").read_text(encoding="utf-8")
+        self.assertIn("      - name: Smoke-test live sanitized monitor end-to-end (read-only)", source)
+        self.assertNotIn("watch.py dispatch", source)
+        self.assertNotIn("actions: write", source)
+        self.assertNotIn("contents: write", source)
+        self.assertNotIn("ROMARR_WATCH_DISPATCH", source)
+        self.assertNotIn("path: ${{ runner.temp }}/romarr-live-status.json", source)
+        self.assertNotIn("if: always()", source)
+        self.assertNotRegex(source, r"(?m)^\s*schedule:\s*$")
+
+
 if __name__ == "__main__":
     unittest.main()
