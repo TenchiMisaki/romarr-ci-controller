@@ -70,13 +70,13 @@ jobs:
             exit 1
           fi
           cat > "$build_dir/Dockerfile" <<'DOCKERFILE'
-          FROM python:3.13-slim
+          FROM --platform=linux/amd64 python:3.13.18-slim@sha256:aaf08c5490d52cd92bc27142a5215b1e47355a5eaf9adfad2a0fbc022d0b5490
           RUN python -m pip install --no-cache-dir 'pytest==9.2.0'
           WORKDIR /src
           DOCKERFILE
-          timeout 240s docker build --quiet --pull --tag "$image" "$build_dir" >/dev/null
+          timeout 240s docker build --quiet --pull --platform linux/amd64 --tag "$image" "$build_dir" >/dev/null
           set +e
-          timeout 300s docker run --rm --network none --read-only \
+          timeout 300s docker run --rm --platform linux/amd64 --network none --read-only \
             --cap-drop ALL --security-opt no-new-privileges \
             --pids-limit 128 --memory 1024m --cpus 2 \
             --user "$(id -u):$(id -g)" \
@@ -138,7 +138,7 @@ jobs:
                   raise SystemExit('BLOCKED: unbounded JUnit totals')
               if declared != {'tests': len(cases), 'failures': 0, 'errors': 0, 'skipped': 0}:
                   raise SystemExit('BLOCKED: JUnit totals mismatch or non-passing case')
-              if any(x for case in cases for x in case if x.tag in ('failure', 'error', 'skipped')):
+              if any(x.tag in ('failure', 'error', 'skipped') for case in cases for x in case):
                   raise SystemExit('BLOCKED: JUnit contained non-passing outcomes')
               total += len(cases)
           if not 0 < total <= 256:
