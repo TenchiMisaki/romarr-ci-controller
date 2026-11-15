@@ -142,6 +142,22 @@ class EvidenceContract(unittest.TestCase):
                     with self.assertRaises(EvidenceError):
                         self.verify(archive(official, mutate=contradict), official)
 
+    def test_missing_run_identity_is_not_valid_controller_evidence(self):
+        """Matching missing or empty metadata cannot establish a run receipt."""
+        for field in ("run_id", "run_attempt"):
+            for case in ("missing", "empty", "blank", "wrong_type"):
+                def corrupt(docs):
+                    for name in ("summary.json", "testcases.json"):
+                        if case == "missing":
+                            docs[name].pop(field, None)
+                        else:
+                            docs[name][field] = {
+                                "empty": "", "blank": " ", "wrong_type": 42,
+                            }[case]
+                with self.subTest(field=field, case=case):
+                    with self.assertRaises(EvidenceError):
+                        self.verify(archive(False, mutate=corrupt), False)
+
     def test_boolean_case_count_is_not_a_valid_integer(self):
         for official in (True, False):
             with self.subTest(official=official), self.assertRaises(EvidenceError):
