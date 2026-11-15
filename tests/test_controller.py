@@ -195,6 +195,26 @@ class EvidenceTests(unittest.TestCase):
         counts, _ = evidence.collect_junit(junit_path)
         self.assertEqual((code, timed_out, counts["passed"]), (0, False, 1))
 
+    def test_child_does_not_inherit_api_keys_or_ssh_agent(self):
+        """A real pytest child cannot use inherited API keys or agent access."""
+        source = Path(self.temp.name) / "key_safety"
+        source.mkdir()
+        (source / "test_example.py").write_text(
+            "import os\n"
+            "def test_key_environment():\n"
+            "    for key in ('ROMARR_API_KEY', 'AWS_ACCESS_KEY_ID', 'PRIVATE_KEY', 'SSH_AUTH_SOCK'):\n"
+            "        assert key not in os.environ\n",
+            encoding="utf-8",
+        )
+        with patch.dict(os.environ, {
+            "ROMARR_API_KEY": "sentinel", "AWS_ACCESS_KEY_ID": "sentinel",
+            "PRIVATE_KEY": "sentinel", "SSH_AUTH_SOCK": "/tmp/fake-agent",
+        }, clear=False):
+            code, timed_out, _, _, junit_path = evidence.launch_pytest(
+                source, source, ["test_example.py"])
+        counts, _ = evidence.collect_junit(junit_path)
+        self.assertEqual((code, timed_out, counts["passed"]), (0, False, 1))
+
     def test_actual_pytest_success(self):
         source = Path(self.temp.name) / "positive"
         source.mkdir()
