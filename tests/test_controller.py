@@ -175,12 +175,12 @@ class EvidenceTests(unittest.TestCase):
         source = Path(self.temp.name) / "credentials"
         source.mkdir()
         (source / "test_example.py").write_text(
-            "import os\\n"
-            "def test_environment():\\n"
+            "import os\n"
+            "def test_environment():\n"
             "    for key in ('GH_TOKEN', 'PRIVATE_PASSWORD', 'SERVICE_SECRET_KEY', "
-            "'OTHER_CREDENTIAL_FILE', 'GIT_CONFIG_COUNT', 'GITHUB_ENV', 'GITHUB_OUTPUT'):\\n"
-            "        assert key not in os.environ\\n"
-            "    assert os.environ['ROMARR_ARCHIVE_ORG_PLUGIN_SOURCE'] == '/tmp/fixture'\\n",
+            "'OTHER_CREDENTIAL_FILE', 'GIT_CONFIG_COUNT', 'GITHUB_ENV', 'GITHUB_OUTPUT'):\n"
+            "        assert key not in os.environ\n"
+            "    assert os.environ['ROMARR_ARCHIVE_ORG_PLUGIN_SOURCE'] == '/tmp/fixture'\n",
             encoding="utf-8",
         )
         with patch.dict(os.environ, {
