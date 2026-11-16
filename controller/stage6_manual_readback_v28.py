@@ -126,6 +126,22 @@ def _zip_ends_at_eof(data):
     return pos + 22 + comment == len(data)
 
 
+def configured_storage_hosts(primary: str, secondary: str = '') -> frozenset[str]:
+    """Only accept one or two independently configured exact Azure artifact hosts.
+
+    An unset secondary entry preserves the old single-host behavior. Never
+    discover trusted hosts from the received GitHub redirect Location.
+    """
+    if type(primary) is not str or type(secondary) is not str:
+        raise ValueError('STORAGE_HOST_CONFIGURATION_INVALID')
+    hosts = [primary] + ([secondary] if secondary else [])
+    if (len(hosts) != len(set(hosts)) or not 1 <= len(hosts) <= 2 or
+            any(re.fullmatch(r'[a-z0-9-]{1,64}\.blob\.core\.windows\.net', h) is None
+                for h in hosts)):
+        raise ValueError('STORAGE_HOST_CONFIGURATION_INVALID')
+    return frozenset(hosts)
+
+
 def run(*, run_id: int, run_attempt: int, controller_sha: str,
         artifact_id: int, producer_digest: str, token: str,
         storage_hosts: frozenset[str], producer_sha: str,
@@ -138,7 +154,7 @@ def run(*, run_id: int, run_attempt: int, controller_sha: str,
             or type(producer_digest) is not str or SHA.fullmatch(producer_digest) is None
             or type(token) is not str or not 1 <= len(token) <= 1024
             or any(ord(c) < 33 or ord(c) > 126 for c in token)
-            or type(storage_hosts) is not frozenset or len(storage_hosts) != 1
+            or type(storage_hosts) is not frozenset or not 1 <= len(storage_hosts) <= 2
             or any(type(h) is not str or not re.fullmatch(r'[a-z0-9.-]{1,253}', h)
                    or h == 'api.github.com' for h in storage_hosts)):
         return _block('INDEPENDENT_INPUT_INVALID')
@@ -188,7 +204,9 @@ def main():
             artifact_id=int(os.environ['EXPECTED_ARTIFACT_ID']),
             producer_digest=os.environ['UPLOADED_ARTIFACT_DIGEST'],
             token=os.environ['GITHUB_TOKEN'],
-            storage_hosts=frozenset({os.environ['APPROVED_STORAGE_HOST']}),
+            storage_hosts=configured_storage_hosts(
+                os.environ['APPROVED_STORAGE_HOST'],
+                os.environ.get('ADDITIONAL_APPROVED_STORAGE_HOST', '')),
             producer_sha=os.environ['UNTRUSTED_SOURCE_SHA'],
             producer_cases=os.environ['UNTRUSTED_CASES'],
             producer_exit=os.environ['UNTRUSTED_EXIT'],
@@ -197,7 +215,7 @@ def main():
     except (KeyError, ValueError, TypeError):
         outcome = _block('MISSING_OR_INVALID_INPUT')
     if outcome.state != 'ADVISORY_BYTES_VERIFIED':
-        print('BLOCKED: manual advisory download/integrity unverified')
+        print('BLOCKED: manual advisory download/integrity unverified (' + outcome.reason + ')')
         raise SystemExit(1)
     print(f'ADVISORY_DOWNLOADED_BYTES_VERIFIED: {outcome.passing_cases} anonymous cases')
     print('GITHUB_TEST_RECEIPT_ACCEPTED: false')
