@@ -251,8 +251,6 @@ jobs:
           UNTRUSTED_CASES: ${{ needs.isolated_source.outputs.cases }}
           UNTRUSTED_EXIT: ${{ needs.isolated_source.outputs.pytest_exit }}
           SOURCE_JOB_RESULT: ${{ needs.isolated_source.result }}
-          APPROVED_STORAGE_HOST: ${{ vars.ROMARR_STAGE6_STORAGE_HOST }}
-          ADDITIONAL_APPROVED_STORAGE_HOST: ${{ vars.ROMARR_STAGE6_STORAGE_HOST_SECONDARY }}
         run: |
           set -euo pipefail
           python3 controller/stage6_manual_readback_v28.py
