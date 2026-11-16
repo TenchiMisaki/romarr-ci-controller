@@ -52,6 +52,18 @@ The [feature-branch monitor run #43733394087](https://github.com/TenchiMisaki/ro
 
 **Still missing:** a genuine native GitHub `schedule` event on the merged Stage 5 controller `main` revision `300a40331db03811b3e9994bd4392d030b22740e`. The three observed `workflow_dispatch` events do not prove native scheduled delivery or identify the particular actor that initiated them. Alert delivery, fallback collisions, reboot persistence and token recovery remain unaccepted. Stage 5 must not dispatch pytest.
 
+### Stage 6 milestone — first real ROMarr source test on GitHub-hosted runners (November 15, 2026)
+
+[Controller PR #26](https://github.com/TenchiMisaki/romarr-ci-controller/pull/26) was merged after the updated exact-head CodeRabbit review completed without new actionable findings. The earlier review finding involving JUnit XML child-element truthiness was corrected, tested with negative fixtures, and marked resolved/outdated. The manual workflow pins the Python Docker base image by digest and does not change the read-only Stage 5 monitor.
+
+[Hosted manual source-pilot run #43775641984](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/43775641984) completed **successfully** on controller `main` commit `dc2d263491b19f5963337ef62f098f84558fbf91` (`workflow_dispatch`, attempt 1). The source-test job fetched pinned ROMarr fork commit `3c9896d2406d331c4f25c8a9f661c711ffe51745` and ran `tests/test_wired.py` in the restricted, network-disabled Docker test container. Its log reported **70 anonymous passing test cases**. The separate validation job also completed successfully and confirmed the bounded 70-case handoff and expected source revision. Job-by-job logs, rather than only the workflow status, were checked.
+
+**Accepted milestone:** a real, pinned ROMarr test file successfully ran in the hosted source job, and a separate hosted job checked its advisory, anonymous output. This follows the successful synthetic two-job success/failure canary in [PR #25](https://github.com/TenchiMisaki/romarr-ci-controller/pull/25).
+
+**Not accepted or enabled:** this fixed-revision manual pilot does not test a changing PR head/base or provide a trusted PR receipt. It explicitly prints `TEST_ACCEPTED: false`, `PUBLICATION_AUTHORIZED: false`, and `PR_SOURCE_TESTED: false`. Comprehensive source-test coverage, independent provenance and trusted allowlisted artifact publication, negative/race/recovery tests, Stage 5 native schedule acceptance, skipped-test policy, deduplication, alerting, owner-controlled unattended dispatch/disarm, and replacement of the manual fallback remain open. Do not enable unattended pytest or retire the fallback based on this milestone.
+
+**Next engineering step:** implement the trusted publisher/allowlisted receipt boundary, prove full source/run/commit integrity and negative cases on hosted runners, then separately review and authorize one tightly scoped unattended trial.
+
 ## The next engineering work and acceptance gates
 
 ### Stage 5 — Finish operational scheduling acceptance
