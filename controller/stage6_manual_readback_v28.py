@@ -12,6 +12,7 @@ import json
 import os
 import re
 import stat
+from urllib.parse import urlsplit
 import zipfile
 
 import stage6_artifact_http as transport
@@ -126,26 +127,30 @@ def _zip_ends_at_eof(data):
     return pos + 22 + comment == len(data)
 
 
-def configured_storage_hosts(primary: str, secondary: str = '') -> frozenset[str]:
-    """Only accept one or two independently configured exact Azure artifact hosts.
+def github_artifact_redirect_allowed(location: str) -> bool:
+    """Allow exact HTTPS GitHub Actions Azure Blob artifact domains only.
 
-    An unset secondary entry preserves the old single-host behavior. Never
-    discover trusted hosts from the received GitHub redirect Location.
+    GitHub documents *.blob.core.windows.net for Actions artifact downloads;
+    storage-account names rotate. This domain check is not an assertion that
+    every Azure account is GitHub-owned: authenticated artifact provenance,
+    exact expected digest, bounded reads and token-free storage GET remain
+    independent mandatory checks. The shared exact-host transport stays strict.
     """
-    if type(primary) is not str or type(secondary) is not str:
-        raise ValueError('STORAGE_HOST_CONFIGURATION_INVALID')
-    hosts = [primary] + ([secondary] if secondary else [])
-    if (len(hosts) != len(set(hosts)) or not 1 <= len(hosts) <= 2 or
-            any(re.fullmatch(r'[a-z0-9-]{1,64}\.blob\.core\.windows\.net', h) is None
-                for h in hosts)):
-        raise ValueError('STORAGE_HOST_CONFIGURATION_INVALID')
-    return frozenset(hosts)
+    if type(location) is not str:
+        return False
+    try:
+        host = urlsplit(location).hostname
+    except ValueError:
+        return False
+    if (type(host) is not str or
+            re.fullmatch(r'[a-z0-9]{3,24}\.blob\.core\.windows\.net', host) is None):
+        return False
+    return transport._host_allowed(location, frozenset({host}))
 
 
 def run(*, run_id: int, run_attempt: int, controller_sha: str,
         artifact_id: int, producer_digest: str, token: str,
-        storage_hosts: frozenset[str], producer_sha: str,
-        producer_cases: str, producer_exit: str, producer_state: str,
+        producer_sha: str, producer_cases: str, producer_exit: str, producer_state: str,
         opener=None, fetch_snapshots=None) -> AdvisoryResult:
     """Recheck authenticated API provenance, then hash raw signed-storage bytes."""
     if (type(run_id) is not int or run_id < 1 or type(run_attempt) is not int
@@ -153,10 +158,7 @@ def run(*, run_id: int, run_attempt: int, controller_sha: str,
             or type(controller_sha) is not str or HEX40.fullmatch(controller_sha) is None
             or type(producer_digest) is not str or SHA.fullmatch(producer_digest) is None
             or type(token) is not str or not 1 <= len(token) <= 1024
-            or any(ord(c) < 33 or ord(c) > 126 for c in token)
-            or type(storage_hosts) is not frozenset or not 1 <= len(storage_hosts) <= 2
-            or any(type(h) is not str or not re.fullmatch(r'[a-z0-9.-]{1,253}', h)
-                   or h == 'api.github.com' for h in storage_hosts)):
+            or any(ord(c) < 33 or ord(c) > 126 for c in token)):
         return _block('INDEPENDENT_INPUT_INVALID')
     if opener is None:
         opener = transport._opener()
@@ -178,7 +180,7 @@ def run(*, run_id: int, run_attempt: int, controller_sha: str,
         location = transport._request(opener, base, token, max_bytes=0,
                                       accept='application/vnd.github+json',
                                       expected_status=302, require_location=True)
-        if not transport._host_allowed(location, storage_hosts):
+        if not github_artifact_redirect_allowed(location):
             return _block('REDIRECT_NOT_ALLOWLISTED')
         raw = transport._request(opener, location, None, max_bytes=MAX_OUTER,
                                  accept='application/octet-stream', expected_status=200)
@@ -204,9 +206,6 @@ def main():
             artifact_id=int(os.environ['EXPECTED_ARTIFACT_ID']),
             producer_digest=os.environ['UPLOADED_ARTIFACT_DIGEST'],
             token=os.environ['GITHUB_TOKEN'],
-            storage_hosts=configured_storage_hosts(
-                os.environ['APPROVED_STORAGE_HOST'],
-                os.environ.get('ADDITIONAL_APPROVED_STORAGE_HOST', '')),
             producer_sha=os.environ['UNTRUSTED_SOURCE_SHA'],
             producer_cases=os.environ['UNTRUSTED_CASES'],
             producer_exit=os.environ['UNTRUSTED_EXIT'],
