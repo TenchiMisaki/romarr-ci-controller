@@ -109,6 +109,10 @@ class Controller:
         """Return the trusted-host capability; subclasses may bind its scope."""
         return self.accepted
 
+    def _dispatch(self, source, inputs):
+        """Use the trusted dispatcher; subclasses may add a final POST guard."""
+        return self.ports.dispatch(self.sha, inputs)
+
     def _change(self, operation):
         """Validate both sides of every persisted state transition."""
         def update(state):
@@ -251,7 +255,7 @@ class Controller:
             raise StateBlocked('POLICY_OR_CLAIM_CHANGED_BEFORE_POST')
         if not self._accepted(source):
             raise StateBlocked('ACCEPTANCE_CHANGED_BEFORE_POST')
-        status, body = self.ports.dispatch(self.sha, dict(
+        status, body = self._dispatch(source, dict(
             pr_number=str(source.pr_number), head_sha=source.head_sha,
             base_sha=source.base_sha, claim_nonce=claim['nonce']))
         run_id = dispatch_run_id(status, body)

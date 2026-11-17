@@ -169,6 +169,12 @@ the claim uncertain with no POST; it never silently frees a claim. Authenticated
 disarm and explicit known-run reconciliation remain possible after expiry.
 Checks cannot recall a POST already issued or certify future clock accuracy.
 
+The trial supplies a `pre_post` predicate to `GitHubPorts.dispatch`. The adapter
+rechecks it after its last pre-POST revision-tag GET, directly before the mutating
+request, so approval cannot pass once and then expire during that network lookup.
+An adapter that cannot honor this callback must fail rather than drop the guard.
+The no-retry rule and uncertain persisted claim remain unchanged on rejection.
+
 The trusted host must obtain actual owner approval independently and protect
 the expected digest, controller, clock, source isolation and API roles. A hash
 computed from caller-supplied JSON is not authentication. No code here loads

@@ -96,3 +96,7 @@ class OwnerTrialController(Controller):
     def _accepted(self, source=None):
         """Require the pinned trial scope before arming, reserving and POST."""
         return self.approval.permits(controller_sha=self.sha, source=source)
+
+    def _dispatch(self, source, inputs):
+        """Recheck after the adapter's last tag lookup, before its POST request."""
+        return self.ports.dispatch(self.sha, inputs, pre_post=lambda: self._accepted(source))

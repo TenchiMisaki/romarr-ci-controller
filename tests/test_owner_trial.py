@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 from controller_cycle import Controller, WORKFLOW
+from controller_api import GitHubPorts
 from durable_state import GitHubState, StateBlocked, encode
 from owner_trial import OwnerTrialController, SCOPE, TrialApproval
 from stage6_pr_identity_v32 import CONTROLLER_REPO, ExactPR, SOURCE_REPO
@@ -97,6 +98,27 @@ class TrialTests(unittest.TestCase):
         key, nonce = self.arm_reserve()
         self.ports.after_source = lambda: setattr(self, 'now', 200)
         with self.assertRaisesRegex(StateBlocked, 'ACCEPTANCE_CHANGED_BEFORE_POST'):
+            self.controller.dispatch(key, nonce)
+        self.assertEqual(self.store.value['claims'][key]['state'], 'DISPATCH_UNCERTAIN')
+        self.assertEqual(self.ports.posts, 0)
+
+    def test_actual_adapter_rechecks_expiry_after_network_tag_lookup(self):
+        case = self
+        class Reader:
+            """Model the tag GET spanning the approval deadline."""
+            def request(self, method, path, body=None):
+                case.assertEqual(method, 'GET')
+                case.now = 200
+                return dict(ref='refs/tags/controller-revision-'+SHA,
+                            object=dict(type='commit', sha=SHA))
+        class Dispatcher:
+            """No POST may reach this adapter after the delayed tag read."""
+            def request(self, method, path, body=None):
+                case.fail('POST attempted after approval expired')
+        adapter = GitHubPorts(reader=Reader(), dispatcher=Dispatcher(), owner=None)
+        self.ports.dispatch = adapter.dispatch
+        key, nonce = self.arm_reserve()
+        with self.assertRaisesRegex(StateBlocked, 'DISPATCH_APPROVAL_REJECTED_BEFORE_POST'):
             self.controller.dispatch(key, nonce)
         self.assertEqual(self.store.value['claims'][key]['state'], 'DISPATCH_UNCERTAIN')
         self.assertEqual(self.ports.posts, 0)

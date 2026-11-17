@@ -100,6 +100,33 @@ class APITests(unittest.TestCase):
         ports = GitHubPorts(reader=api, dispatcher=api, owner=api)
         self.assertTrue(ports.legacy_claim(ExactPR(42, 'a'*40, 'b'*40)))
 
+    def test_dispatch_approval_guard_runs_between_tag_lookup_and_post(self):
+        calls = []
+        class API:
+            """Record the actual guarded adapter's request order."""
+            def request(self, method, path, body=None):
+                calls.append(method)
+                if method == 'GET':
+                    return dict(ref='refs/tags/controller-revision-'+'c'*40,
+                                object=dict(type='commit', sha='c'*40))
+                return dict(workflow_run_id=123)
+        api = API()
+        ports = GitHubPorts(reader=api, dispatcher=api, owner=None)
+        def approve():
+            calls.append('GUARD')
+            return True
+        ports.dispatch('c'*40, {}, pre_post=approve)
+        self.assertEqual(calls, ['GET','GUARD','POST','GET'])
+        for value in (False, None, 1):
+            calls.clear()
+            with self.assertRaises(StateBlocked):
+                ports.dispatch('c'*40, {}, pre_post=lambda: value)
+            self.assertEqual(calls, ['GET'])
+        calls.clear()
+        with self.assertRaisesRegex(StateBlocked, 'CALLBACK_INVALID'):
+            ports.dispatch('c'*40, {}, pre_post=True)
+        self.assertEqual(calls, [])
+
 
 if __name__ == '__main__':
     unittest.main()
