@@ -1,5 +1,32 @@
 # ROMarr CI Controller — Fully Automated Project 2
 
+## Separate fork-sync security investigation — November 17, 2026 (Pacific)
+
+This is a related security-evidence checkpoint only; it does not change the
+Stage 6–8 or CP acceptance criteria, implementation branches, or operational state.
+
+The failed source scan was reproduced on an independently reconstructed exact
+Git tree using official-checksum-verified Gitleaks 8.30.1. The third finding is
+`generic-api-key` at `tests/soundtracks_support.py:18`, public blob
+`be5413a930121e137664633f64ddcbf482deccf9`, introduced by official
+[upstream commit 4ca16cd0](https://github.com/BlizzHacker/romarr/commit/4ca16cd0810b56699d6808f2b67909213fd76710).
+The source is a loopback-only fake RomM authentication fixture used by redaction
+tests; no genuine credential exposure was identified in the focused trace.
+No matched values or raw scanner output are published.
+
+All 70 newly reachable historical blobs produced their exact required scanner
+canary; only the same fixture was additional. Filename-sensitive traversal found
+zero eligible aliases/findings. A private, unmerged dormant exact-fixture
+proposal passed 22 focused local regressions and 293 hosted Linux controller
+tests. It has no workflow wiring; the active gate still rejects three findings.
+Full source/platform acceptance remains blocked, and prior successful artifacts
+remain preserved. CodeRabbit review is pending at this checkpoint.
+
+**Continuation:** complete exact-head review and separately approve the exact
+public-fixture exception before any separately reviewed tree/history wiring.
+Do not enable unattended testing, alter Project 2 work, merge, deploy, or
+interpret this diagnostic milestone as publication authorization.
+
 ## Current integrated development — November 16, 2026 (Pacific)
 
 This section supersedes older current-state introductions and next-step wording;
