@@ -27,7 +27,7 @@ public-fixture exception before any separately reviewed tree/history wiring.
 Do not enable unattended testing, alter Project 2 work, merge, deploy, or
 interpret this diagnostic milestone as publication authorization.
 
-## Current integrated development — November 16, 2026 (Pacific)
+## Current integrated development — November 17, 2026 (Pacific)
 
 This section supersedes older current-state introductions and next-step wording;
 all dated milestones and the complete CP-01–CP-10 requirements below are retained.
@@ -38,9 +38,12 @@ is unchanged and remains NOT ACCEPTED / NOT ENABLED.
 ### Original Stage 6–8 implementation
 
 [PR #32](https://github.com/TenchiMisaki/romarr-ci-controller/pull/32), branch
-`review/stage6-hosted-claims`, is OPEN / UNMERGED at
-`7b73d5a4b2c3c6a020a408f80b12031cc9c585ed`, based on controller main
-`3f4ee847585a5252b34cb26ddddb62cdd8929ec7`.
+`review/stage6-hosted-claims`, is **MERGED** into main at
+`f078b2dfbcd1f69f09ffa9a58cb171b86fdd99bc`; reviewed head
+`7b73d5a4b2c3c6a020a408f80b12031cc9c585ed`. The merge tree
+`0ee699ff3918c983ed746509233d2483967dded0` exactly matches the scanned,
+reviewed and final CI-tested tree. This is COMPLETE for the dormant code increment;
+original Stage 6–8 hosted operational acceptance remains IN PROGRESS / NOT ACCEPTED.
 
 - Stage 6: dormant Git-backed cross-run state, sole-parent non-force updates with
   independent readback, authenticated owner-control adapter/default-disabled
@@ -68,7 +71,11 @@ is unchanged and remains NOT ACCEPTED / NOT ENABLED.
   duplicate dispatch fences. All three have scoped corrections and regressions at
   `6a4fc5b7`. A further valid stale-review starvation finding was corrected at
   `7b73d5a4` with two additional regressions; invalid collection remains blocked.
-  **Final-head CI/review and thread closure remain PENDING**.
+  [Final CI #44037114684](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44037114684)
+  passed **374 unittest / 296 Stage 6 pytest**, compilation and read-only smoke checks.
+  [Final CodeRabbit assessment](https://github.com/TenchiMisaki/romarr-ci-controller/pull/32#issuecomment-6940919987)
+  covers exact head `7b73d5a4`, with no new actionable findings and all four
+  review threads resolved before merge.
 - Gitleaks 8.30.1: initial/corrected complete trees and exact outgoing server
   histories passed with zero findings. Scanner binary/accepted positive control
   reused after identity verification. Corrected server tree
@@ -83,8 +90,11 @@ storage, dispatch/recovery, owner-control, complete receipt or scheduler accepta
 
 [PR #33](https://github.com/TenchiMisaki/romarr-ci-controller/pull/33), branch
 `review/cross-platform-advisory`, is OPEN / UNMERGED at
-`6b0ccb2502f6a90ffe8617000e52501542ef9c9c`. Its six-file increment is separately
-based on the same main, preserving independent review of the original workstream.
+`58e30591114d89bfdef79aa0ce02ecfe5d15f8bc` after the five original review findings
+were corrected. The original six-file increment was based on `3f4ee847`; the
+correction adds a seventh file for independent Windows Job Object ownership.
+The new CI merge parents independently bind main `f078b2df` and head `58e30591`;
+combined-source hosted verification and final review remain separate gates.
 
 | Requirements | Implemented advisory scope | Acceptance still open |
 | --- | --- | --- |
@@ -95,11 +105,41 @@ based on the same main, preserving independent review of the original workstream
 | CP-05 | Actual prepared EXE digest/launch/proof adapter | Real EXE execution and independent provenance/timeout cleanup acceptance |
 | CP-07, CP-10 | Same-revision versioned required/optional readiness and separate failure dimensions | Accepted live evidence/policy; missing platforms remain NOT TESTED; no release authority |
 
-**Local CP contracts: 26 PASS**, compilation/whitespace PASS. New GitHub Actions
+**Original local CP contracts: 26 PASS** at `6b0ccb25`; corrected candidate:
+**36 PASS** on Windows/Python 3.15.2, compilation/whitespace PASS. New GitHub Actions
 matrix tests controller contracts only on Linux 3.13 and Windows 3.11/3.13; it is
 not ROMarr platform acceptance. [Platform matrix #44036374376](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44036374376)
 and [controller CI #44036374198](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44036374198)
-completed successfully at `6b0ccb25`. **CodeRabbit remains PENDING.**
+completed successfully at `6b0ccb25`.
+[CodeRabbit's initial review](https://github.com/TenchiMisaki/romarr-ci-controller/pull/33#pullrequestreview-5934423535)
+found five valid issues: hidden local ZIP-header metadata, collection failure
+upgraded to PASS, output bounds applied after process exit, skipped Windows tests
+reported PASS, and descendant cleanup after successful EXE launcher exit. All five
+have candidate corrections and regressions in `58e30591`; threads remain open
+pending revised-head verification.
+
+The corrected implementation accounts for local/central archive layout, preserves
+collection failure, emits SKIPPED receipts, drains both streams live with bounded
+retention and terminates owned process trees. The independent Windows adapter
+creates the process suspended, assigns a kill-on-close Job Object before resuming,
+and verifies cleanup after launcher exit or timeout. Local tests execute safe
+Python fixture trees, output floods, timeout and assignment-denial cases. Initial
+local failures (missing import, incomplete JUnit fixture and termination-observation
+race) were corrected before publication; neither these tests nor the hosted contract
+matrix establish ROMarr runtime acceptance.
+
+Revised-head [controller CI #44107365945](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44107365945)
+and [platform matrix #44107366168](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44107366168)
+completed successfully on merge `82b12f848ef3a7f1f4f28c913911485b3c1e4bff`, tree
+`b023a9631e8c7a890308f400f89fb0e630e36cc4`, with independently verified parents
+`f078b2df` and `58e30591`. Controller CI ran **410 unittest cases: 407 passed,
+3 Windows-only cases skipped on Linux**, plus **296 Stage 6 pytest PASS** and two
+existing deliberate duplicate-ZIP warnings. Windows Python 3.11 and 3.13 each ran
+**36 PASS / zero skips**; Linux ran **33 PASS / 3 Windows-only skips**. Compilation,
+public-artifact and live read-only smoke checks passed. These skips are the explicit
+OS gates for native Job Object tests, exercised on both Windows minors, not ROMarr
+source-suite skip acceptance. Exact-head CodeRabbit remains IN PROGRESS. Do not
+merge until the revised-head review and unresolved-thread gates pass.
 Gitleaks 8.30.1 final-tree/outgoing-history/exact-server-history scans passed with
 zero findings. Server tree `55a54d4c78123a7d913886bd3e16afd33064f105` matched the
 scanned payload. Privacy/provenance review completed; no substantial maintainer
@@ -108,6 +148,11 @@ source copied. Official CI/runtime interfaces were read for interoperability at
 
 Per-capability design/limits:
 [cross-platform advisory acceptance](https://github.com/TenchiMisaki/romarr-ci-controller/blob/review/cross-platform-advisory/docs/proposals/cross-platform-advisory.md).
+Correction publication: Gitleaks 8.30.1 complete tree, outgoing history and exact
+server-created history passed with zero findings; server tree
+`d2fd4a3def92addc2c0d99b3c41a5e6bba64ab15` matches scanned bytes. Independent
+privacy/provenance review completed. No substantial third-party source was copied.
+
 No release builds/publishing, new credentials, source/platform scheduler,
 automatic remediation, production changes or fallback retirement were introduced.
 
@@ -367,11 +412,65 @@ The controller handles source-level CI and review evidence. Docker image/platfor
 
 **Documentation follow-up:** The controller `README.md` and `VALIDATION.md` status introductions and a monitor workflow header were noted as referring to older Stage 3/Stage 5-candidate status. Those are documentation discrepancies, not demonstrated controller failures; amend under the normal publication checks without changing cron as a cosmetic fix.
 
+## Continuity, progress and recovery contract
+
+This draft backlog #23 remains the authoritative Project 2 roadmap, progress index
+and acceptance tracker; this existing companion is its complete engineering and
+recovery handoff. Do not create another backlog, tracking repository or checkpoint
+system. Keep this summary readable for humans and agents, link evidence and retain
+historical milestones, failures, decisions, requirements and recovery boundaries.
+
+At every new or resumed session, read current applicable owner guidance, this PR
+and complete companion, applicable repository instructions and live branches,
+commits, PRs, Actions, artifacts and CodeRabbit findings. Reconcile published state,
+identify milestones absent from the backlog and resume the last independently
+verified point. GitHub establishes actual published state; backlog requirements
+and acceptance records establish intended behavior. An open PR may contain complete
+work; a merge does not establish operational acceptance; previous tests apply only
+to equivalent source/dependencies/environment/scope; a green workflow proves only
+its actual checks; a backlog update does not prove code publication; unpublished
+local changes are not recoverable merely because a conversation mentions them.
+
+Update this existing handoff and the concise PR synopsis alongside significant
+verified milestones, merged PRs, acceptance outcomes, major changes or new blockers.
+Record exact refs/runs, actual tests/scans/review, current work, unresolved tasks,
+dependencies, next action and recovery limits. COMPLETE means implemented and
+verified for the stated acceptance scope; IN PROGRESS means development or checks
+remain; BLOCKED names an actual dependency/authorization; NOT TESTED means validation
+was not performed; NOT ACCEPTED means required operational acceptance is missing.
+Do not postpone recoverable progress until a final response.
+
+After interruption, independently inspect GitHub before retrying any uncertain
+mutation, dispatch or PR creation. Record uncertainty and unsuccessful checks; never
+blindly retry non-idempotent work, create duplicates or overwrite newer edits. If a
+usage limit or interruption becomes apparent, publish verified progress while the
+required gates and execution remain available. This is a recovery strategy, not a
+guarantee of a final write or response at exhaustion.
+
+Continue independent authorized development, testing, review and backlog work
+without routine approval pauses or repeated audits. A blocked operation blocks only
+dependent work. Preserve exact-source, privacy/secret scans, CodeRabbit, protected
+originals and recovery; no unattended tests, credential-bearing deployment,
+production changes, upstream merge, automatic remediation or manual-fallback
+retirement without separate required authorization and operational acceptance.
+
+Routine authored progress omits repetitive execution-target headings; targeting,
+preflight, identity, permissions, source/destination, security and recovery checks
+remain enforced. Manual commands still identify an unambiguous target and shell.
+Interface-generated indicators are outside this presentation preference.
+
+These continuity requirements are owner-authorized. Their permanent private
+owner-guidance publication remains BLOCKED pending original-byte preservation,
+current-destination drift checks and independent readback. Repository records do not
+update ChatGPT Project Instructions; any required manual synchronization is PENDING.
+The shell execution blocker is cleared in the current session; direct Git transport
+still fails DNS. Do not infer unavailable toolchains or live platform acceptance.
+
 ## Resume work safely
 
 Before continuing, review this backlog, [controller README](https://github.com/TenchiMisaki/romarr-ci-controller/blob/main/README.md), [VALIDATION.md](https://github.com/TenchiMisaki/romarr-ci-controller/blob/main/VALIDATION.md), applicable repository `AGENTS.md`, and current source, GitHub Actions jobs and CodeRabbit reviews. Reconcile the controller's current `main` revision, relevant fork branches, target PR head/base SHAs and claim/run identities. Previous green tests belong to their exact revisions, not a later moving head.
 
-**Resume from the Current integrated development section above: PR #32 and PR #33 exact-head review/CI, then independently gated hosted and platform acceptance.** Do not repeat accepted source tests, confuse read-only workflow successes with hosted source acceptance, merge the review PR, or silently enable privileged automation. Stop only at the real security, owner-controlled GitHub, upstream or production boundaries.
+**Resume from the Current integrated development section above: PR #32 is merged; finish PR #33 revised-head combined-source CI/review, then independently gated hosted and platform acceptance.** Do not repeat accepted source tests, confuse read-only workflow successes with hosted source acceptance, merge the review PR, or silently enable privileged automation. Stop only at the real security, owner-controlled GitHub, upstream or production boundaries.
 
 ## Approved scope expansion — cross-platform evidence verification (November 16, 2026)
 
