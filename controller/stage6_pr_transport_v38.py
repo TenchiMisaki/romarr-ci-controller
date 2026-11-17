@@ -1,4 +1,4 @@
-"""Read-only, fail-closed transport for the PRIVATE Stage 6 offline candidate.
+"""Read-only, fail-closed transport for advisory and full-source collectors.
 
 The caller owns the independently verified expected run/PR/artifact identities.
 Only fixed public GitHub REST endpoints may be requested. The authenticated
@@ -28,6 +28,7 @@ _CONTROLLER = 'TenchiMisaki/romarr-ci-controller'
 _API_VERSION = '2026-03-10'
 _MAX_META = 1024 * 1024  # jobs collection may include many bounded steps
 _MAX_ARCHIVE = 65536
+_MAX_ARCHIVE_CEILING = 4 * 1024 * 1024
 _SHA = re.compile(r'[0-9a-f]{64}\Z')
 _RUN = re.compile(r'[1-9][0-9]{0,18}\Z')
 _BLOB_HOST = re.compile(r'[a-z0-9]{3,24}\.blob\.core\.windows\.net\Z')
@@ -154,17 +155,22 @@ def _parse_json(raw):
 
 
 class ReadOnlyGitHubTransport:
-    """Bind strict API/redirect policy to two callbacks consumed by v37.
+    """Bind strict API/redirect policy to advisory and source receipt callbacks.
 
     Supply one independently obtained, ephemeral, read-only GitHub token.
     The injected opener exists for offline unit testing; production callers
     must use the default opener and verify runner/token provenance separately.
+    The default archive ceiling stays 64 KiB; larger source receipts require an
+    explicit per-instance limit, never exceeding 4 MiB.
     """
-    def __init__(self, token: str, *, opener=None):
+    def __init__(self, token: str, *, opener=None, archive_limit=_MAX_ARCHIVE):
         if not _valid_token(token):
             raise IdentityRejected('GITHUB_TOKEN_INVALID')
+        if type(archive_limit) is not int or not 1 <= archive_limit <= _MAX_ARCHIVE_CEILING:
+            raise IdentityRejected('ARCHIVE_LIMIT_INVALID')
         self._token = token
         self._opener = opener if opener is not None else _new_opener()
+        self._archive_limit = archive_limit
 
     def get_json(self, url: str) -> object:
         if not _known_api_url(url) or url.endswith('/zip'):
@@ -175,7 +181,7 @@ class ReadOnlyGitHubTransport:
 
     def get_artifact_bytes(self, url: str, max_bytes: int, expected_sha256: str) -> bytes:
         if (not _known_api_url(url) or not url.endswith('/zip') or
-                type(max_bytes) is not int or not 1 <= max_bytes <= _MAX_ARCHIVE or
+                type(max_bytes) is not int or not 1 <= max_bytes <= self._archive_limit or
                 type(expected_sha256) is not str or not _SHA.fullmatch(expected_sha256)):
             raise IdentityRejected('ARTIFACT_EXPECTATION_INVALID')
         location = _get(self._opener, url, self._token, expected_status=302,
