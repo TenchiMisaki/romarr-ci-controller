@@ -58,6 +58,40 @@ independent reads. The collector must preserve before/download/final-read order;
 passing snapshots to a pure verifier does not establish network authenticity or
 ordering by itself.
 
+### Ordered full-source collection library
+
+`source_receipt_collector.collect_source_receipt` supplies the missing ordering
+for full-source Linux or Windows 3.11/3.13 receipts in the fixed personal source
+and controller repositories. It rejects focused/package scope before any read;
+the trusted caller must separately approve the exact full-suite workflow, job,
+required steps and producer/controller revision. No producer or execution policy
+is inferred from a receipt claiming `source-full`.
+
+The collector checks an eligible exact PR and current base, validates complete
+run/job/step/artifact metadata, rechecks source, downloads only the fixed artifact
+ID with a 4 MiB bound and pinned digest, and validates the complete anonymous
+envelope before calling an independent execution-provenance verifier. It then
+re-reads run/jobs/artifact and finally PR/base after that verifier. Expiry, stale
+source, changed metadata, size/digest/count/skip/privacy failures and collection
+errors block progression. Callback errors are sanitized; mutations and retries
+are not implemented.
+
+Without independent provenance, a valid bundle remains `ADVISORY_BLOCKED`.
+Even verified full-source receipts remain advisory, with test acceptance,
+publication and unattended flags false. Injected callbacks do not prove actual
+authentication, redirect isolation or source execution. The current manual
+focused advisory workflow does not produce this three-file platform contract;
+it is deliberately not promoted or silently reinterpreted as full-suite evidence.
+Accepted producer/verifier jobs, transport and live ordered collection remain
+required. The library installs no workflow, credentials, publisher or source job.
+
+The existing read-only HTTP adapter supports an explicit per-instance archive
+limit up to 4 MiB for this contract. Its default remains 64 KiB, preserving the
+current focused advisory boundary. The larger limit does not alter fixed API
+targets, certificate verification, redirect allowlists, token-free storage reads,
+actual byte bounds or digest checks. Tests pass a real full-size envelope through
+the concrete transport with modeled HTTP; live network acceptance is separate.
+
 Receipt ZIPs use schema `romarr-platform-receipt-v1`, anonymous ordinal/outcome
 records and a two-file SHA-256 manifest. ZIP limit is 4 MiB; each member is at most
 1 MiB, case count at most 10,000. All members and field sets are explicit. Missing
