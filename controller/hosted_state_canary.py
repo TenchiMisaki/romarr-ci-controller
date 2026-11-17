@@ -366,6 +366,11 @@ class Wire:
                     encoding='OTHER'
                 try:
                     raw_error=error.read(MAX_RESPONSE+1)
+                    declared=(error.headers or {}).get('Content-Length')
+                    if declared is not None and (
+                            not re.fullmatch(r'[0-9]{1,20}', declared)
+                            or int(declared) != len(raw_error)):
+                        body_read='INCOMPLETE'
                 except IncompleteRead as incomplete:
                     raw_error=(incomplete.partial[:MAX_RESPONSE+1]
                                if type(incomplete.partial) is bytes else b'')

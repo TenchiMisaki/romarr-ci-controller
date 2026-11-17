@@ -106,6 +106,41 @@ class SiblingEvidenceTests(unittest.TestCase):
         self.assertFalse(self.api.drop_response)
         self.assertEqual(self.wire.git.patches, 8)
 
+    def test_real_http_short_sized_read_cannot_qualify_generic_rejection(self):
+        from http.client import HTTPResponse
+        raw = json.dumps(dict(message='Reference cannot be updated')).encode()
+        class Socket:
+            def makefile(self, mode):
+                return io.BytesIO(b'HTTP/1.1 422 Invalid\r\nContent-Length: '+
+                    str(len(raw)+1).encode()+b'\r\n\r\n'+raw)
+        response = HTTPResponse(Socket())
+        response.begin()
+        class Opener:
+            def open(self, req, timeout):
+                raise HTTPError(req.full_url, 422, 'private', response.headers, response)
+        with patch('hosted_state_canary.build_opener', return_value=Opener()):
+            with self.assertRaises(CanaryHTTPFailure) as caught:
+                Wire('synthetic-fixture')('PATCH', PREFIX+'git/refs/'+REF)
+        self.assertEqual(caught.exception.reason, 'OTHER_RESPONSE')
+        self.assertEqual(caught.exception.response['body_read'], 'INCOMPLETE')
+        self.assertEqual(caught.exception.response['captured_bytes'], len(raw))
+        self.assertTrue(response.closed)
+
+    def test_declared_length_must_be_valid_and_match_captured_bytes(self):
+        raw = json.dumps(dict(message='Reference cannot be updated')).encode()
+        for declared in (str(len(raw)), str(len(raw)-1), '-1', 'invalid', '9'*5000):
+            class Opener:
+                def open(self, req, timeout):
+                    raise HTTPError(req.full_url, 422, 'private',
+                        {'Content-Length': declared}, io.BytesIO(raw))
+            with self.subTest(declared=declared[:20]):
+                with patch('hosted_state_canary.build_opener', return_value=Opener()):
+                    with self.assertRaises(CanaryHTTPFailure) as caught:
+                        Wire('synthetic-fixture')('PATCH', PREFIX+'git/refs/'+REF)
+                complete = declared == str(len(raw))
+                self.assertEqual(caught.exception.reason == 'REFERENCE_CANNOT_BE_UPDATED', complete)
+                self.assertEqual(caught.exception.response['body_read'], 'SUCCESS' if complete else 'INCOMPLETE')
+
     def test_generic_message_is_separate_and_only_complete_identity_patch_422(self):
         for status, method, encoding, message in [
                 (422, 'PATCH', 'identity', 'Reference cannot be updated'),
