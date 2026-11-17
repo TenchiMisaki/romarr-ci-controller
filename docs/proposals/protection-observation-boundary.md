@@ -54,3 +54,10 @@ ruleset response omitted bypass_actors. The collector correctly refused to assum
 that omission means an empty bypass list. This is incomplete visibility, not
 proof of a weakened protection. Connector-backed complete observations require
 independent collection and are recorded separately from the public-read attempt.
+
+Required update-rule compatibility: the documented explicit parameter
+update_allows_fetch_and_merge=false is accepted alongside the parameterless
+approved baseline. True, non-boolean values, unknown/missing parameter keys and
+parameters on other required restrictions remain rejected. This is collector
+compatibility only; it neither modifies protection settings nor approves relaxed
+update restrictions. Official schema: https://docs.github.com/en/rest/repos/rules

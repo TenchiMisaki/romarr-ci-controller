@@ -93,6 +93,21 @@ class ProtectionTests(unittest.TestCase):
                 row['rules'][0]['parameters'] = dict(unexpected=True)
             self.assertEqual(inspect_protections(reader)['configuration_observations'], 'BLOCKED')
 
+    def test_explicit_strict_update_parameter_is_supported_but_relaxed_or_malformed_is_not(self):
+        for value in (False, True, 0, 0.0, 'false', None, [], {}):
+            reader = Reader()
+            row = reader.rows[PREFIX+'rulesets/27484547']
+            update = next(rule for rule in row['rules'] if rule['type'] == 'update')
+            update['parameters'] = dict(update_allows_fetch_and_merge=value)
+            expected = 'PASS' if type(value) is bool and value is False else 'BLOCKED'
+            with self.subTest(value=value):
+                self.assertEqual(inspect_protections(reader)['configuration_observations'], expected)
+        for parameters in ({}, dict(update_allows_fetch_and_merge=False, unexpected=False)):
+            reader = Reader()
+            row = reader.rows[PREFIX+'rulesets/27484547']
+            next(rule for rule in row['rules'] if rule['type'] == 'update')['parameters'] = parameters
+            self.assertEqual(inspect_protections(reader)['configuration_observations'], 'BLOCKED')
+
     def test_final_repository_identity_change_cannot_pass(self):
         reader = Reader()
         original = reader.request

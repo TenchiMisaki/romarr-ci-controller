@@ -48,6 +48,17 @@ def repository(row):
     return 'FIXED_PUBLIC_REPOSITORY'
 
 
+def required_rule(rule):
+    """Allow only parameterless restrictions or the equivalent strict update form."""
+    if rule == dict(type=rule['type']):
+        return True
+    parameters = rule.get('parameters')
+    return (rule['type'] == 'update' and set(rule) == {'type', 'parameters'}
+            and type(parameters) is dict and set(parameters) == {'update_allows_fetch_and_merge'}
+            and type(parameters['update_allows_fetch_and_merge']) is bool
+            and parameters['update_allows_fetch_and_merge'] is False)
+
+
 def configuration(row, identifier):
     """Require approved selectors/restrictions/no bypass; retain stronger rules."""
     target, selector, required = EXPECTED[identifier]
@@ -59,7 +70,7 @@ def configuration(row, identifier):
             or type(row.get('rules')) is not list or len(row['rules']) > 100
             or any(type(rule) is not dict or type(rule.get('type')) is not str for rule in row['rules'])
             or not required.issubset({rule['type'] for rule in row['rules']})
-            or any(rule['type'] in required and rule != dict(type=rule['type']) for rule in row['rules'])
+            or any(rule['type'] in required and not required_rule(rule) for rule in row['rules'])
             or any(sum(rule['type'] == kind for rule in row['rules']) != 1 for kind in required)):
         raise StateBlocked('PROTECTION_CONFIGURATION_INVALID')
     # Never export arbitrary rule parameters, names, actor metadata or URLs.
