@@ -643,6 +643,24 @@ execution, operational state/tag/protections or unattended policy is included.
 Installation/review success is not proof of the unknown live failure's repair.
 This addresses missing diagnostic evidence, not the unknown live failure cause.
 
+### Diagnostic invocation #44176498862 — OLD SHA REJECTED / NO MUTATIONS
+
+The owner initiated [run #44176498862](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44176498862),
+attempt 1, on main `d97d9ac9`, actor TenchiMisaki / 71314201. Approval text was
+correct, but EXPECTED_CONTROLLER_SHA still contained the prior installed SHA
+`f09e7cf6b1f27ee10de7cc2dc120f1b2bd8638d2`. The new diagnostic report explicitly
+records STATE_BLOCKED / CANARY_HOST_OR_AUTHORIZATION_INVALID / HOST_GATE.
+No credential-bearing API path or mutation ran. Expected run-owned ref is absent
+(404), operational state remains `d2930189`, and main remains `d97d9ac9`.
+Artifact `14369797563` independently passes size 332, single-member ZIP/CRC,
+parsed report and SHA-256
+`95da332bed55a8ccf04eb11f41d0b59ca460328db17ed80549d9ade668686fcd`.
+The additional bounded diagnostic exercise has not begun. The owner should use a
+NEW Run workflow invocation, completely replace the controller field with
+`d97d9ac93858ad704d6f356337db22b6048b3444`, keep approval
+`CREATE_RETAINED_CANARY_ONLY`, and run once. Re-run jobs retains the rejected
+old input. Preserve all preceding run and canary evidence; do not weaken the pin.
+
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
 The owner explicitly approved the exact disabled bootstrap and additive
