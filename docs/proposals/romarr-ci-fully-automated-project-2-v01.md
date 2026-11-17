@@ -863,6 +863,54 @@ force/delete/reset, or fork-sync modification occurred. Operational state remain
 unchanged and disabled at `d2930189ec0aa9c59b1a2fdf108fe75892f9ad03`.
 Existing publication/review requirements and retained canary recovery history remain.
 
+### Approved manual canary completed — November 17, 2026, 14:28 PST
+
+[Run #44190390405](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44190390405)
+completed SUCCESS on approved main `1327160afab30de83128e34501581f7ff4aa23b0`,
+owner workflow_dispatch, attempt 1. Job `134417921481` and every step succeeded.
+This fulfills the one approved bounded manual validation; the preceding instructions
+to start it are now historical, not a request for another run. No automatic retry
+or further mutation is authorized by this success.
+
+The report is **CANARY_OBSERVATIONS_PASS**, phase OPERATIONAL_READBACK, elapsed
+21.88 seconds. Eight distinct canonical disabled-state sibling candidates were
+verified: one winner, one explicit non-fast-forward rejection, six separately
+reported generic reference rejections, no writer failures. The single simulated
+post-success response loss was injected and fresh-client recovery readback passed.
+It is a deliberate injection, not a naturally occurring network-loss acceptance.
+No raw provider error text, credential or private artifact URL is published.
+
+Independent REST readback confirms the retained canary chain (sole parent at each
+step): final `fcc8d6afef5cdf9ef0986b3628b250e465bd63c9` → winner
+`2cbd2e6ecb3b0655802a62476a8fdf415b06638a` → seed
+`fe85a84800fc106acd172d7706b9257a0834e093` → reviewed main
+`1327160afab30de83128e34501581f7ff4aa23b0`. Final, winner and seed each have canonical
+state tree `023ee9a1690d81c8a9344839c125c721e62d9702`. The runtime independently read
+all eight candidates; external readback separately confirms the retained chain,
+not an independent external enumeration of all seven rejected commit objects.
+
+Artifact `14375289949`, `controller-state-canary-44190390405-1`, 620 bytes, ZIP
+SHA-256 `ac6f2092bc24ba14aefc40705ed529001aeadfbc9e6ed7754882846f4cc04f50`, independently
+passed download digest/size, sole `controller-canary-summary.json` member, CRC,
+JSON and expected content/identity checks. Seven-day retention expires November 24;
+this authoritative entry preserves the acceptance facts beyond artifact expiry.
+
+**Scope:** bounded run-owned canary concurrency and simulated-response-loss
+observations PASS under the owner-approved criterion. Historical failures remain
+failures and retained evidence; no blanket 422 reclassification is implied.
+`operational_acceptance=NOT TESTED`, `policy_enabled=false`,
+`source_dispatch_allowed=false`. Operational state ref remains unchanged at
+`d2930189ec0aa9c59b1a2fdf108fe75892f9ad03`. Production systems, protections, source
+execution, unattended activation, fallback retirement and fork-sync are unaffected.
+
+**Remaining critical path:** verify protected operational-ref refusal behavior
+without destructive real-ref probes; finish deployment/owner binding, full-source
+execution/provenance/skip acceptance, scheduler collision/recovery and platform
+runtime receipts before any separately approved unattended handoff. The canary
+success does not establish provider-side per-ref credential confinement, actual
+ruleset refused-write behavior or general operational acceptance. Reuse completed
+code/CI/review/security evidence; do not repeat this accepted canary needlessly.
+
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
 The owner explicitly approved the exact disabled bootstrap and additive
