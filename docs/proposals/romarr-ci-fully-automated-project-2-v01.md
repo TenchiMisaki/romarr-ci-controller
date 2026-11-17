@@ -476,14 +476,36 @@ The production encoder/validator checked the initial state locally. Complete
 candidate/server trees and outgoing histories passed checksum-verified Gitleaks
 8.30.1 with the accepted positive control. No existing ref was replaced.
 
-The exact revision tag is still absent from matching-ref collection. An existing
-GitHub CLI session was unavailable; a noninteractive Git push dry-run also
-failed for missing authentication before any mutation. No credentials were read. The
-connector has no supported lightweight-tag creation tool; no release, branch-name
-workaround or credential extraction was attempted. Actual update/deletion/force
-refusals remain NOT TESTED, and configured protections do not certify enforcement.
-No destructive probes against real refs were attempted. The failed Work browser
-handoff is no longer the routine development path, as directed by the owner.
+The owner subsequently approved the website-only prerelease route with no
+attached assets or activation. Supporting branch
+`checkpoint/controller-revision-8a981726` was created and independently verified
+at the approved commit. The initial owner-published release used a historical
+claim tag; after the website correction, live release `449111426` is published
+as a prerelease, with zero attached assets, exact tag
+`controller-revision-8a98172685accf23e2a0e51d72bbc954237dc95a` and target
+`checkpoint/controller-revision-8a981726`. Independent exact-ref readback confirms
+it is a lightweight tag pointing directly at
+`8a98172685accf23e2a0e51d72bbc954237dc95a`. Revision ruleset `27484547` remains
+Active with update/deletion restrictions and no bypass actors. The historical
+claim tag still points to `79966309584ede300f3449e6fcccc8dfb2027c4e` and was not
+moved by this work. The state branch remains at `d2930189`.
+
+The production read-only deployment preflight was then executed against the
+public GitHub REST API with normal TLS verification and redirects rejected.
+The reviewed preflight/backend/API/coordinator files were byte-equivalent to
+approved controller `8a981726`. Nine sequential, credential-free GETs completed
+November 17, 11:43:07–11:43:45 PST (38.66 seconds): repository, exact lightweight
+revision, canonical sole-member state, disabled policy/generation 0 with zero
+claims/alerts, final tag readback and final repository identity all PASS.
+`prerequisites=PASS`, `operational_acceptance=NOT TESTED`,
+`activation_allowed=false`, `dispatch_allowed=false`. This is a point-in-time
+public-read observation, not authenticated owner-entrypoint, credential-role,
+protection refusal, hosted mutation/concurrency, source/provenance or recovery
+acceptance. No credentials were loaded and no mutating method was used.
+
+The missing-tag provisioning blocker is now resolved. Configured protections and
+exact tag identity still do not establish actual rejected-write behavior. No
+force/delete probes, arming, credential deployment or source dispatch occurred.
 Configuration
 readback alone is not enforcement acceptance. No credential deployment, actual
 trial approval record, source dispatch, scheduled caller, unattended activation
@@ -544,7 +566,7 @@ remain preserved here; no private content or package is copied into this reposit
   state/dispatch/recovery acceptance path from merged `8a981726`. Local Git,
   read-only preflight, owner-trial binding and ordered full-source collection
   libraries are complete. The approved bootstrap/protection scope above
-  remains REVISION TAG / ENFORCEMENT PENDING; do not repeat accepted tests or create another
+  remains ENFORCEMENT / HOSTED ACCEPTANCE PENDING; do not repeat accepted tests or create another
   tracker. Preserve live acceptance gates and disabled unattended operation.
 
 ## Current Stage 6 continuation — November 16, 2026 (Pacific)
