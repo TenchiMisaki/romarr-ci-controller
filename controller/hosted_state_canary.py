@@ -84,7 +84,7 @@ class CanaryHTTPFailure(StateBlocked):
                  body_read='SUCCESS', encoding='identity'):
         if (type(status) is not int or not 100 <= status <= 599
                 or method not in {'GET', 'POST', 'PATCH'}
-                or reason not in {'REFERENCE_UPDATE_FAILED', 'OTHER_RESPONSE'}
+                or reason not in {'REFERENCE_UPDATE_FAILED', 'REFERENCE_CANNOT_BE_UPDATED', 'OTHER_RESPONSE'}
                 or body_read not in {'SUCCESS','TIMEOUT','IO_ERROR','INCOMPLETE'}
                 or encoding not in {'identity','gzip','br','deflate','OTHER'}):
             raise StateBlocked('CANARY_DIAGNOSTIC_INVALID')
@@ -99,7 +99,8 @@ SAFE_FAILURE_CODES = frozenset({
     'STATE_WRITE_READBACK_UNCERTAIN', 'CANARY_API_REQUEST_REJECTED',
     'CANARY_RACE_NOT_EXCLUSIVE', 'CANARY_WINNER_READBACK_INVALID',
     'CANARY_RESTART_READBACK_INVALID', 'CANARY_RESPONSE_LOSS_NOT_INJECTED',
-    'CANARY_RACE_WRITER_FAILED', 'CANARY_HOST_OR_AUTHORIZATION_INVALID',
+    'CANARY_RACE_WRITER_FAILED', 'CANARY_CANDIDATE_EVIDENCE_INVALID',
+    'CANARY_HOST_OR_AUTHORIZATION_INVALID',
     'CANARY_REPOSITORY_IDENTITY_INVALID', 'CANARY_EXISTING_REF_PRESERVED',
 })
 
@@ -205,7 +206,11 @@ class CanaryAPI:
                 raise StateBlocked('CANARY_PATCH_INVALID')
             if self.barrier is not None:
                 self.barrier.wait(timeout=120)
-            row = self._call('PATCH', 'git/refs/' + self.ref, body)
+            try:
+                row = self._call('PATCH', 'git/refs/' + self.ref, body)
+            except (CanaryConflict, CanaryHTTPFailure) as error:
+                error.canary_target = body['sha']
+                raise
             if self.drop_response:
                 self.drop_response = False
                 raise SimulatedResponseLoss('CANARY_SIMULATED_LOST_RESPONSE')
@@ -235,6 +240,38 @@ class CanaryAPI:
         return GitHubState(self).load()[0]
 
 
+def verify_race_candidates(api, parent, outcomes):
+    """Read all eight distinct siblings; this proves structure, not rejection cause.
+
+    Only GETs are issued. A generic rejection remains separately identified;
+    no operational-ref enforcement or natural response-loss acceptance follows.
+    """
+    invalid = 'CANARY_CANDIDATE_EVIDENCE_INVALID'
+    if (type(parent) is not str or not SHA.fullmatch(parent)
+            or type(outcomes) is not list or len(outcomes) != 8):
+        raise StateBlocked(invalid)
+    targets = [target for kind, target in outcomes]
+    if (any(kind not in {'winner', 'conflict', 'generic_rejected'} for kind, _ in outcomes)
+            or any(type(target) is not str or not SHA.fullmatch(target) for target in targets)
+            or len(set(targets)) != 8 or set(targets) != api.created
+            or parent in targets or sum(kind == 'winner' for kind, _ in outcomes) != 1):
+        raise StateBlocked(invalid)
+    for target in sorted(targets):
+        row = api.request('GET', PREFIX+'git/commits/'+target)
+        if (type(row) is not dict or row.get('sha') != target
+                or type(row.get('tree')) is not dict
+                or row['tree'].get('sha') != '023ee9a1690d81c8a9344839c125c721e62d9702'
+                or type(row.get('parents')) is not list or len(row['parents']) != 1
+                or type(row['parents'][0]) is not dict or row['parents'][0].get('sha') != parent):
+            raise StateBlocked(invalid)
+    winner, observed = GitHubState(api).load()
+    if winner != next(target for kind, target in outcomes if kind == 'winner') or observed != initial_state():
+        raise StateBlocked('CANARY_WINNER_READBACK_INVALID')
+    return dict(candidates=8, distinct_siblings=True, canonical_disabled_tree=True,
+                explicit_non_fast_forward=sum(kind == 'conflict' for kind, _ in outcomes),
+                generic_reference_rejected=sum(kind == 'generic_rejected' for kind, _ in outcomes))
+
+
 def exercise(api, progress=None):
     """Race eight identical disabled states, then simulate a lost successful PATCH.
 
@@ -252,8 +289,13 @@ def exercise(api, progress=None):
     def writer(_):
         try:
             return ('winner', GitHubState(api).save(parent, initial_state()))
-        except CanaryConflict:
-            return ('conflict', None)
+        except CanaryConflict as error:
+            return ('conflict', getattr(error, 'canary_target', None))
+        except CanaryHTTPFailure as error:
+            if (error.status == 422 and error.method == 'PATCH'
+                    and error.reason == 'REFERENCE_CANNOT_BE_UPDATED'):
+                return ('generic_rejected', getattr(error, 'canary_target', None))
+            return ('error', failure_evidence(error))
         except Exception as error:
             return ('error', failure_evidence(error))
     try:
@@ -270,6 +312,8 @@ def exercise(api, progress=None):
         raise StateBlocked('CANARY_RACE_WRITER_FAILED')
     if len(winners) != 1 or len(api.created) != 8:
         raise StateBlocked('CANARY_RACE_NOT_EXCLUSIVE')
+    progress['phase'] = 'CANDIDATE_READBACK'
+    progress['race_evidence'] = verify_race_candidates(api, parent, results)
     progress['phase'] = 'WINNER_READBACK'
     winner, observed = GitHubState(api).load()
     if winner != winners[0] or observed != initial_state():
@@ -289,6 +333,7 @@ def exercise(api, progress=None):
         raise StateBlocked('CANARY_RESTART_READBACK_INVALID')
     return dict(schema=1, state='CANARY_OBSERVATIONS_PASS', ref=api.ref,
         seed=parent, winner=winner, final=final, writers=8, successes=1,
+        race_evidence=progress['race_evidence'],
         simulated_lost_response=True, policy_enabled=False,
         source_dispatch_allowed=False, operational_acceptance='NOT TESTED')
 
@@ -341,6 +386,11 @@ class Wire:
             if (method=='PATCH' and code==422 and type(payload) is dict
                     and payload.get('message')=='Update is not a fast forward'):
                 raise CanaryConflict('CANARY_NON_FAST_FORWARD_REJECTED') from None
+            if (method == 'PATCH' and code == 422 and body_read == 'SUCCESS'
+                    and encoding == 'identity' and type(payload) is dict
+                    and payload.get('message') == 'Reference cannot be updated'):
+                raise CanaryHTTPFailure(code, method, 'REFERENCE_CANNOT_BE_UPDATED',
+                                        raw_error, body_read, encoding) from None
             reason = ('REFERENCE_UPDATE_FAILED' if type(payload) is dict
                       and payload.get('message') == 'Reference update failed' else 'OTHER_RESPONSE')
             raise CanaryHTTPFailure(code, method, reason, raw_error, body_read, encoding) from None
