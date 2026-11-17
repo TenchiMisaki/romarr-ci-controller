@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from platform_receipts import (ExpectedPlatform, MAX_ZIP, PlatformRejected,
     PlatformResult, github_metadata, verify_platform)
 from stage6_dispatch_ledger import _source
-from stage6_pr_identity_v32 import CONTROLLER_REPO, ExactPR, IdentityRejected, SOURCE_REPO
+from stage6_pr_identity_v32 import CONTROLLER_REPO, ExactPR, SOURCE_REPO
 
 API = 'https://api.github.com/repos/'
 SOURCE_PLATFORMS = {'source-linux', 'windows-py311', 'windows-py313'}
@@ -88,7 +88,7 @@ def collect_source_receipt(*, expected, source, get_json, get_artifact_bytes,
             source_before=identity, source_after=identity,
             verify_subject=None if verify_execution is None else lambda _: proof)
         return SourceCollection(result.state, receipt=result)
-    except (IdentityRejected, PlatformRejected, ValueError, TypeError, KeyError,
-            AttributeError, OSError, RuntimeError, TimeoutError):
+    except Exception:
         # Never expose callback errors, signed URLs, raw source or artifact data.
+        # Process-control BaseExceptions deliberately remain uncaught.
         return SourceCollection('BLOCKED', 'SOURCE_COLLECTION_OR_VALIDATION_FAILED')

@@ -183,6 +183,23 @@ class SourceCollectorTests(unittest.TestCase):
         self.assertEqual(result.state,'BLOCKED')
         self.assertNotIn('private synthetic',str(result))
 
+    def test_ordinary_exceptions_from_every_callback_boundary_are_sanitized(self):
+        def unavailable(*args):
+            raise Exception('private synthetic callback detail')
+        for callback in ('get_json','get_artifact_bytes','verify_execution'):
+            with self.subTest(callback=callback):
+                result=self.collect(**{callback:unavailable})
+                self.assertEqual(result.state,'BLOCKED')
+                self.assertEqual(result.reason,'SOURCE_COLLECTION_OR_VALIDATION_FAILED')
+                self.assertNotIn('private synthetic',str(result))
+
+    def test_process_control_exceptions_are_not_converted_to_results(self):
+        for signal in (KeyboardInterrupt,SystemExit):
+            def interrupted(_):
+                raise signal()
+            with self.subTest(signal=signal), self.assertRaises(signal):
+                self.collect(verify_execution=interrupted)
+
     def test_concrete_transport_accepts_large_full_bundle_without_storage_auth(self):
         self.fixture.receipt['counts']['passed'] = 2000
         self.fixture.cases['cases'] = [dict(ordinal=n,outcome='passed') for n in range(1,2001)]
