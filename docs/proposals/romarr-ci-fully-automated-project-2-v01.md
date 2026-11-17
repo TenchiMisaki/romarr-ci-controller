@@ -355,6 +355,47 @@ receipts, caller identity, native/fallback collisions, alert delivery and recove
 remain separate acceptance gates. No schedule, fallback, permissions or source
 execution was changed. Stage 5 operational acceptance remains IN PROGRESS.
 
+### Anonymous source receipt serialization — PR #38 MERGED
+
+[PR #38](https://github.com/TenchiMisaki/romarr-ci-controller/pull/38) adds the
+missing dormant full-source envelope serializer at reviewed candidate
+`a17a5b20cbb93500df541c4241b4495f51c4e1eb`, tree
+`916ad23562bb935eff08805f42ee19c28a37d571`, based on main `8a981726`.
+It converts bounded private UTF-8 pytest JUnit into anonymous ordinal/outcome
+records and deterministic receipt/cases/manifest ZIP bytes, checked by the
+existing independent parser. Explicit suite/root counters, actual outcomes,
+exit codes, independently pinned expected counts and size bounds must agree.
+Unsafe XML, hidden nested outcomes, ambiguous structures and inconsistent exits
+are rejected; failures/errors and skips remain non-PASS. No private test names,
+paths, logs, messages or properties enter the public envelope.
+
+Local serializer/collector regressions: **29 PASS**, including 11 new serializer
+tests, real serializer/consumer round trips, independent-proof blocking, XML,
+privacy, counts/exits and 10,000-case bounds. Compilation/whitespace passed.
+[Hosted CI #44153979497](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44153979497)
+passed **474 unittest cases / 3 Windows-only skips** and **296 pytest cases**,
+compilation, public artifact smoke and live read-only monitor checks.
+The CI merge `44d86fe1803c034d9969a7cdc6a4b8d8ab9b3aa6` has the exact scanned
+candidate tree and parents main `8a981726` / head `a17a5b20`.
+Complete candidate/server/CI-merge trees and outgoing histories passed Gitleaks
+8.30.1 checksum and positive-control checks with zero findings.
+[Final CodeRabbit assessment](https://github.com/TenchiMisaki/romarr-ci-controller/pull/38#issuecomment-6957910108)
+independently covers exact head `a17a5b20`, with no actionable findings or retained
+architecture concerns and no review threads. Review was observed in progress from
+19:01 UTC and complete by 19:08 UTC; no extra review request was posted.
+PR #38 is MERGED at `cd320e3fe6d0abf37164de08c471d9d096d9f0e9`.
+Independent Git commit readback confirms the exact tested/scanned tree and parents
+`8a981726` / `a17a5b20`; this is the current verified main after PR #38.
+The previously approved bootstrap tag remains pinned to `8a981726`; this dormant
+increment does not silently retarget that authorization.
+
+The full-suite selection, absence of deselection, toolchain identity and completed
+isolated execution must be proven independently by a trusted host. Count matching
+is not execution provenance. Producer provenance stays BLOCKED and freshness
+NOT_TESTED; independent consumer proof remains mandatory. No runner, workflow,
+uploader, credential loader or unattended source test is installed. The existing
+focused advisory producer is unchanged. Original Stage 6–8 acceptance is unchanged.
+
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
 The owner explicitly approved the exact disabled bootstrap and additive
@@ -384,7 +425,11 @@ bypass lists and `current_user_can_bypass=never`. Existing main ruleset `2734400
 is unchanged. Repository numeric identity and owner were reverified; the owner
 permission lookup returned `admin`. Classic protection collection returned 403
 `Resource not accessible by integration`; applicable-branch-rule enumeration was
-rejected by the connector allowlist. These are collection limits, not absent rules.
+rejected by the connector allowlist. A subsequent credential-free read through the
+official public REST endpoint returned both deletion and non-fast-forward rules
+from ruleset `27485340` as applicable to `controller-state-v1`. This closes the
+applicability collection gap; actual rejected-write behavior remains NOT TESTED.
+Classic protection access remains a collection limit, not evidence of absence.
 
 Matching-ref collection returned an empty list before creation. The approved
 state branch was created once at `d2930189ec0aa9c59b1a2fdf108fe75892f9ad03`,
@@ -398,7 +443,9 @@ The production encoder/validator checked the initial state locally. Complete
 candidate/server trees and outgoing histories passed checksum-verified Gitleaks
 8.30.1 with the accepted positive control. No existing ref was replaced.
 
-The exact revision tag is still absent from matching-ref collection. The
+The exact revision tag is still absent from matching-ref collection. An existing
+GitHub CLI session was unavailable; a noninteractive Git push dry-run also
+failed for missing authentication before any mutation. No credentials were read. The
 connector has no supported lightweight-tag creation tool; no release, branch-name
 workaround or credential extraction was attempted. Actual update/deletion/force
 refusals remain NOT TESTED, and configured protections do not certify enforcement.
@@ -415,8 +462,9 @@ A valid initial state or protection write is not a completed operational handoff
 ### Remaining operational gates and execution limits
 
 **Earlier post-PR #33 preflight — historical November 17 checkpoint:** the
-examined main was `485bb794d08fbded30ca80f5c735d3e3d9bcf2b7`; current verified
-main is `8a98172685accf23e2a0e51d72bbc954237dc95a` after PR #37. Independent authenticated GitHub
+examined main was `485bb794d08fbded30ca80f5c735d3e3d9bcf2b7`; then-current verified
+main was `8a98172685accf23e2a0e51d72bbc954237dc95a` after PR #37; PR #38 above
+records the newer verified main. Independent authenticated GitHub
 reads returned 404 for the dedicated `controller-state-v1` branch and the exact
 `controller-revision-485bb794d08fbded30ca80f5c735d3e3d9bcf2b7` tag. The existing
 manual exact-PR advisory workflow is present at this revision. Real durable-backend
