@@ -626,7 +626,21 @@ passed **491 unittest cases / 3 Windows-only skips / 296 pytest cases**, compila
 artifact and read-only monitor steps. CI merge `db87c790` has exact tree
 `96a5c0fe` and parents `f09e7cf6` / `7f98d5eb`; its tree/history scans PASS.
 [Exact-head CodeRabbit review](https://github.com/TenchiMisaki/romarr-ci-controller/pull/41#issuecomment-6960733240)
-is PENDING. No additional live run has started.
+completed on exact head `7f98d5eb` with no actionable comments, merge-blocking
+risk or retained architecture concerns. No review threads or review submissions
+remain. PR #41 merged at `d97d9ac93858ad704d6f356337db22b6048b3444`.
+Independent REST readback verifies exact tested/scanned tree `96a5c0fe` and
+parents `f09e7cf6` / `7f98d5eb`. No additional live run has started.
+
+The next diagnostic attempt requires explicit owner authorization of one more
+bounded run, retaining the preceding branch and creating a new run-owned canary.
+The owner can authorize and initiate it on the official manual workflow page:
+NEW Run workflow, branch main, full controller SHA
+`d97d9ac93858ad704d6f356337db22b6048b3444`, approval
+`CREATE_RETAINED_CANARY_ONLY`, then Run workflow once. Do not use the former
+`f09e7cf6` input for this changed main. No change to the credential scope, source
+execution, operational state/tag/protections or unattended policy is included.
+Installation/review success is not proof of the unknown live failure's repair.
 This addresses missing diagnostic evidence, not the unknown live failure cause.
 
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
