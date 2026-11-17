@@ -1,0 +1,49 @@
+# INERT PROPOSAL ONLY: not under .github/workflows; requires separate acceptance.
+name: Manual controller state canary
+on:
+  workflow_dispatch:
+    inputs:
+      controller_sha:
+        description: Exact reviewed main SHA; must equal the workflow run SHA
+        required: true
+        type: string
+      approval:
+        description: Type CREATE_RETAINED_CANARY_ONLY
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: controller-manual-state-canary
+  cancel-in-progress: false
+jobs:
+  canary:
+    if: github.repository_id == '1458032121' && github.actor_id == '71314201' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout exact trusted controller
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - name: Exercise only retained run-owned canary state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANARY_APPROVAL: ${{ inputs.approval }}
+          EXPECTED_CONTROLLER_SHA: ${{ inputs.controller_sha }}
+        run: python -u controller/hosted_state_canary.py
+      - name: Retain fixed sanitized canary summary
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: controller-state-canary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/controller-canary-summary.json
+          if-no-files-found: error
+          retention-days: 7
