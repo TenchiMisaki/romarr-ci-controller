@@ -166,10 +166,11 @@ for current prerequisite reporting. No state/tag creation, owner arming, source
 dispatch, credential deployment or protection change occurred. Live operational
 acceptance remains NOT TESTED / NOT ACCEPTED; the manual fallback is preserved.
 
-### Owner-bound advisory trial — IN PROGRESS
+### Owner-bound advisory trial — COMPLETE (dormant library increment)
 
-[PR #36](https://github.com/TenchiMisaki/romarr-ci-controller/pull/36) is OPEN /
-UNMERGED at `42419f2315020c034c7003b9b12ee189ebdc177b`, based on `7a90efff`.
+[PR #36](https://github.com/TenchiMisaki/romarr-ci-controller/pull/36) is **MERGED**
+at `f2842962cf406affc7944bbc2b9e85e9050179a2`; corrected reviewed head
+`7405e4cadcf809adc725f86369e760dccc6c27da`, based on `7a90efff`.
 It binds one advisory trial to canonical approval bytes with an independently
 configured SHA-256 pin, exact owner/repositories/workflow/controller/PR/head/base,
 and issued/expiry times. Approval is immutable and rechecked before arm,
@@ -184,8 +185,24 @@ scanner identity and positive control. Tree `84a4ead24ca6ef285f3d6c48497a04cd4bb
 matches the scanned bytes.
 [CI #44133893688](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44133893688)
 passed **443 unittest cases / 3 Windows-only skips** and **296 pytest cases**,
-compilation/public-artifact/read-only smoke checks. Exact-head CodeRabbit remains
-IN PROGRESS; merge remains gated on its substantive assessment.
+compilation/public-artifact/read-only smoke checks on initial head `42419f23`.
+[Initial CodeRabbit architecture assessment](https://github.com/TenchiMisaki/romarr-ci-controller/pull/36#issuecomment-6955214803)
+identified a valid expiry gap during the adapter's last pre-POST tag GET. Corrected
+head `7405e4ca` carries a `pre_post` predicate through the real adapter and checks
+it after that lookup, directly before the mutating request. Two additional
+regressions cover delayed lookup expiry and real GET/guard/POST ordering; **86
+focused tests PASS**. Corrected tree `ead56a466f09a3cc0f5c0e4596e13eb20e4c5b1d`
+and exact outgoing/server/CI-merge histories passed zero-finding security scans.
+[Corrected CI #44135723376](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44135723376)
+passed **445 unittest cases / 3 Windows-only skips** and **296 pytest cases**,
+compilation/public-artifact/read-only checks. Its merge tree and both parents were
+independently verified.
+[Final CodeRabbit assessment](https://github.com/TenchiMisaki/romarr-ci-controller/pull/36#issuecomment-6955214803)
+covers corrected head `7405e4ca`, with no actionable findings, no unresolved
+threads and no retained architecture concern. Independent main/commit readback
+verified merge `f2842962` has the exact tested/scanned tree and parents
+`7a90efff` / `7405e4ca`. This completes the dormant owner-trial library, not an
+installed owner entrypoint or accepted runtime.
 
 The expected approval digest, controller, clock, credentials and source isolation
 must come from an independently accepted trusted deployment. Hashing arbitrary
@@ -193,6 +210,37 @@ PR/caller JSON cannot authenticate approval. Existing coordinator default-disabl
 behavior and low-level trusted-host capability are preserved; only the new
 subclass adds this trial binding. No real owner approval, state/tag, credentials,
 workflow caller, source execution or unattended activation was provisioned.
+
+### Ordered full-source receipt collection — IN PROGRESS
+
+[PR #37](https://github.com/TenchiMisaki/romarr-ci-controller/pull/37) is OPEN /
+UNMERGED at `912644fc803be6a853e078fa9360c3dcde990ec6`, based on `f2842962`.
+The dormant collector enforces exact eligible PR/current-base, complete metadata,
+source recheck, bounded artifact download, envelope validation, independent
+execution provenance and final metadata/source read order. It accepts only
+source-full Linux or Windows 3.11/3.13 contract scope; focused/package/foreign
+scope is rejected before reads. Missing proof remains ADVISORY_BLOCKED and every
+test-acceptance/publication/unattended authority flag remains false.
+
+The existing HTTP transport's 64 KiB default is preserved; full-source collection
+uses an explicit per-instance limit up to 4 MiB, with unchanged fixed targets,
+TLS/redirect policy, token-free storage, bounds and digest checks. **119 combined
+focused tests PASS**, including 16 new cases, both Windows receipt identities,
+real canonical envelopes, a larger-than-64-KiB bundle through concrete transport
+with modeled HTTP, expiry/source changes and safe failures. Compilation and
+whitespace PASS. Final-tree/outgoing/exact-server-history Gitleaks 8.30.1 scans
+passed with zero findings, verified scanner and positive control. Tree
+`44d72071a638517a211711156608ab39ba5ad981` matches scanned bytes.
+[CI #44137393619](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44137393619)
+passed **461 unittest cases / 3 Windows-only skips** and **296 pytest cases**,
+compilation/public-artifact/read-only smoke checks. Its merge tree and parents
+`f2842962` / `912644fc` were independently verified. Exact-head CodeRabbit remains
+IN PROGRESS; merge is still gated.
+
+The caller must independently approve the full-suite producer/workflow/job/steps
+and execution provenance. The existing focused advisory producer does not emit
+this contract and is not relabeled as full-suite evidence. No producer job,
+credentials, live receipt, source run or unattended caller was provisioned.
 
 ### Cross-platform increment
 
@@ -290,11 +338,36 @@ receipts, caller identity, native/fallback collisions, alert delivery and recove
 remain separate acceptance gates. No schedule, fallback, permissions or source
 execution was changed. Stage 5 operational acceptance remains IN PROGRESS.
 
+### Proposed disabled storage/revision bootstrap — OWNER DECISION PENDING
+
+The next proposed repository configuration is confined to this controller and
+is **NOT APPLIED**. It requires explicit approval for new repository-protection
+settings and a supported authenticated administrative publisher. The current
+connection exposes repository reads and ordinary Git/PR writes, but no ruleset
+write capability; that is a tool boundary, not evidence that protection was set.
+A November 17 read verified existing ruleset `27344007` is active and covers only
+the default branch, with deletion/non-fast-forward restrictions and no bypass.
+Applicable classic protections and branch-rule enumeration remain NOT VERIFIED.
+
+| Proposed target | Exact proposed preparation | Acceptance/recovery boundary |
+| --- | --- | --- |
+| `refs/heads/controller-state-v1` | Create only if absent, with a sole canonical `state.json`: schema 1, policy disabled/generation 0, empty claims/alerts and null last tick | Never replace an existing ref or reset history; preserve exact initial commit/tree/blob and independent readback |
+| State protection | New active branch ruleset matching only `refs/heads/controller-state-v1`; deletion and non-fast-forward restrictions, no bypass actors | Existing default-branch ruleset remains separate; prove actual applicability and rejection behavior before operational acceptance |
+| `refs/tags/controller-revision-<approved-controller-SHA>` | New lightweight tag pointing directly at the exact reviewed controller commit, only if absent | Reject an existing/moved/mismatched tag; identity alone is not immutability |
+| Revision protection | New active tag ruleset matching only `refs/tags/controller-revision-*`; block updates/deletions, no bypass actors | Independently read back actual settings and refusal behavior; future exceptional recovery remains a separate owner-controlled change |
+
+This proposal authorizes nothing by itself. No credential deployment, actual owner
+approval record, source dispatch, scheduled caller, unattended activation or
+fallback retirement is bundled into it. After supported provisioning and readback,
+run the read-only prerequisite collector, then separately complete hosted mutation,
+owner-control, full-source producer/provenance/skip and failure/recovery acceptance.
+A valid initial state or protection write is not a completed operational handoff.
+
 ### Remaining operational gates and execution limits
 
 **Earlier post-PR #33 preflight — historical November 17 checkpoint:** the
 examined main was `485bb794d08fbded30ca80f5c735d3e3d9bcf2b7`; current verified
-main is `7a90efff5ac384a2e2319bc727137a2a2df24c1c` after PR #35. Independent authenticated GitHub
+main is `f2842962cf406affc7944bbc2b9e85e9050179a2` after PR #36. Independent authenticated GitHub
 reads returned 404 for the dedicated `controller-state-v1` branch and the exact
 `controller-revision-485bb794d08fbded30ca80f5c735d3e3d9bcf2b7` tag. The existing
 manual exact-PR advisory workflow is present at this revision. Real durable-backend
@@ -338,7 +411,7 @@ remain preserved here; no private content or package is copied into this reposit
   their prepared artifacts and supported isolated executors. No platform acceptance
   is inferred from controller integration or contract tests.
 - Next: continue the existing hosted owner-control, complete-receipt,
-  state/dispatch/recovery acceptance path from merged `7a90efff`. Local Git
+  state/dispatch/recovery acceptance path from merged `f2842962`. Local Git
   integration and the read-only prerequisite collector are complete; do not repeat its accepted tests or create a
   redundant tracker. Keep live acceptance gates and unattended operation disabled.
 
