@@ -92,6 +92,31 @@ targets, certificate verification, redirect allowlists, token-free storage reads
 actual byte bounds or digest checks. Tests pass a real full-size envelope through
 the concrete transport with modeled HTTP; live network acceptance is separate.
 
+### Dormant source receipt serialization
+
+`source_receipt_producer.source_bundle` converts bounded private pytest JUnit
+bytes into the same three-member platform envelope consumed by the independent
+verifier. A trusted host supplies fixed source/controller/run/job identity and an
+independently pinned expected case count. It accepts only the flat UTF-8 pytest
+JUnit dialect, checks suite/root totals against actual case outcomes, and refuses
+empty/incomplete suites, ambiguous nested outcomes, unsafe XML, unsupported exits
+or exit/count disagreement. Cases contain ordinal/outcome only; names, paths,
+properties, messages, output and tracebacks are never copied. Stored ZIP entries
+have fixed timestamps, filenames and permissions; the real archive parser checks
+the resulting bytes before they can be returned.
+
+Failures/errors remain FAIL and skips remain SKIPPED. Provenance is BLOCKED and
+freshness NOT_TESTED in producer output; the consumer still requires separately
+authenticated run/job/steps, ordered fresh source reads and independent execution
+proof. Matching counts cannot prove full-suite selection, absence of deselection,
+toolchain identity, completed collection or safe execution. The host must establish
+those facts independently before invoking this full-source serializer. The
+environment/collection PASS fields are that host's assertions, not inferred facts
+from XML. No runner, workflow, private-file reader, uploader or credential loader
+is installed here. The existing focused advisory producer remains unchanged.
+Tests exercise genuine serializer/consumer round trips with synthetic metadata,
+not actual ROMarr source execution or hosted provenance acceptance.
+
 Receipt ZIPs use schema `romarr-platform-receipt-v1`, anonymous ordinal/outcome
 records and a two-file SHA-256 manifest. ZIP limit is 4 MiB; each member is at most
 1 MiB, case count at most 10,000. All members and field sets are explicit. Missing
