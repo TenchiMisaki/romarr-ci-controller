@@ -25,6 +25,11 @@ storage blocks rather than resetting it. All historical claims remain present.
 The one-megabyte bound requires a separately reviewed archive plan when reached;
 this implementation never silently truncates evidence.
 
+Each state commit includes a fresh per-call random identifier. Identical state
+transitions from the same parent in the same second must produce distinct
+commits; an idempotent update to a shared identical commit is not an exclusive
+dispatch fence. The dedicated competing-writer regression covers that case.
+
 Before POST, the reservation becomes `DISPATCH_UNCERTAIN` durably, source is
 re-read, and policy generation is checked again. Dispatch requests direct run
 details against a separately provisioned lightweight controller-revision tag,
@@ -48,6 +53,8 @@ actual findings and unresolved threads. Persistent refresh budgets allow at most
 20 additional polls, at least 60 seconds apart, with source rechecks on both sides.
 Collection errors do not imply clean review. This implementation records findings
 and next states; it does not autonomously modify source or call a coding agent.
+The cycle schedules pending completed-advisory review refreshes within the
+persistent budget; review-ready claims are not repeatedly polled.
 Authorized repairs still use the ordinary isolated-branch test/review process.
 
 Stage 8 keeps test acceptance separate from advisory completion. The configured
@@ -61,6 +68,9 @@ Delivery requires an authenticated exact idempotency receipt. Unknown delivery
 persists and is never blindly retried; confirmed non-delivery permits at most
 three attempts spaced at least five minutes apart. No notification provider,
 credentials or actual delivery has been provisioned or accepted.
+Failed-run transitions persist their alert intent atomically. Later ticks process
+pending alerts for terminal claims, including after interruption before the first
+send or confirmed non-delivery. Unknown deliveries remain reconciliation-only.
 
 ## Credential and API boundaries
 

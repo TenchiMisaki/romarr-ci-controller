@@ -10,6 +10,7 @@ import base64
 import copy
 import hashlib
 import json
+import uuid
 
 from stage6_pr_identity_v32 import CONTROLLER_REPO, SHA
 
@@ -115,7 +116,7 @@ class GitHubState:
         if not SHA.fullmatch(str(tree_sha)):
             raise StateBlocked('STATE_WRITTEN_TREE_INVALID')
         commit = self._request('POST', 'git/commits', {
-            'message': 'chore: record controller state transition',
+            'message': 'chore: record controller state transition ' + uuid.uuid4().hex,
             'tree': tree_sha, 'parents': [expected]})
         target = commit.get('sha')
         if (not SHA.fullmatch(str(target)) or commit.get('tree', {}).get('sha') != tree_sha

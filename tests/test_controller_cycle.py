@@ -387,6 +387,38 @@ class CycleTests(unittest.TestCase):
         with self.assertRaisesRegex(StateBlocked, 'BUDGET'):
             restarted.refresh_review(key, 3000, review_api=ReviewAPI(), thread_reader=reader)
 
+    def test_cycle_refreshes_completed_pending_review(self):
+        key, _ = self.observe(findings=True)
+        self.assertEqual(self.store.value['claims'][key]['review_checks'], 0)
+        result = self.controller.cycle(1000, review_api=ReviewAPI(),
+            thread_reader=lambda number, sha: dict(state='VERIFIED', unresolved=0))
+        self.assertEqual(result, 'REVIEW_READY')
+        self.assertEqual(self.store.value['claims'][key]['review_checks'], 1)
+
+    def test_failed_observation_persists_alert_intent_before_delivery(self):
+        key, nonce = self.arm_reserve()
+        self.controller.dispatch(key, nonce)
+        self.ports.observed.update(status='completed', conclusion='failure')
+        self.controller.observe(key, collect_advisory=None, review_api=None, thread_reader=None)
+        self.assertEqual(next(iter(self.store.value['alerts'].values()))['state'], 'PENDING')
+        restarted = Controller(self.store, self.ports, controller_sha='c'*40)
+        result = restarted.cycle(1000, deliver=lambda payload: payload['id'])
+        self.assertEqual(result, 'DELIVERY_VERIFIED')
+        self.assertEqual(next(iter(self.store.value['alerts'].values()))['state'], 'DELIVERED')
+
+    def test_terminal_failure_alert_retries_only_confirmed_nondelivery(self):
+        key, nonce = self.arm_reserve()
+        self.controller.dispatch(key, nonce)
+        self.ports.observed.update(status='completed', conclusion='failure')
+        calls = []
+        def deliver(payload):
+            """Confirm absent delivery once, then return a verified receipt."""
+            calls.append(payload)
+            return None if len(calls) == 1 else payload['id']
+        self.assertEqual(self.controller.cycle(1000, deliver=deliver), 'RUN_FAILED')
+        self.assertEqual(self.controller.cycle(1300, deliver=deliver), 'DELIVERY_VERIFIED')
+        self.assertEqual(len(calls), 2)
+
 
 class GitAPI:
     """Model immutable Git objects and server-side non-force ref update."""
@@ -476,6 +508,83 @@ class GitStateTests(unittest.TestCase):
     def test_capacity_and_nonfinite_values_block(self):
         for state in (dict(value='x'*1_000_001), dict(value=float('nan'))):
             with self.assertRaises((StateBlocked, ValueError)): encode(state)
+
+    def test_same_parent_same_state_same_second_commits_are_unique(self):
+        first, second = GitAPI(), GitAPI()
+        for api in (first, second):
+            store = GitHubState(api)
+            head, state = store.load()
+            store.save(head, state)
+        messages = [next(c[2]['message'] for c in api.calls if c[0] == 'POST' and c[1].endswith('/git/commits'))
+                    for api in (first, second)]
+        self.assertNotEqual(messages[0], messages[1])
+
+    def test_identical_concurrent_state_writes_have_exactly_one_winner(self):
+        """Model GitHub's same-second object identity and non-force semantics."""
+        class AtomicGit:
+            """Store immutable objects, with both writers observing one parent."""
+            def __init__(inner):
+                inner.head = 'a'*40
+                raw = encode(initial_state())
+                blob = git_sha('blob', raw)
+                inner.docs = {
+                    'git/commits/'+'a'*40: dict(sha='a'*40, tree=dict(sha='b'*40)),
+                    'git/trees/'+'b'*40: dict(sha='b'*40, truncated=False, tree=[
+                        dict(path='state.json', mode='100644', type='blob', sha=blob)]),
+                    'git/blobs/'+blob: dict(sha=blob, encoding='base64', size=len(raw),
+                        content=base64.b64encode(raw).decode())}
+                inner.lock = threading.Lock()
+                inner.local = threading.local()
+                inner.barrier = threading.Barrier(2)
+
+            def request(inner, method, path, body=None):
+                """Permit idempotent PATCH to reproduce the old double-success bug."""
+                suffix = path.split('romarr-ci-controller/', 1)[1]
+                if method == 'GET' and suffix.startswith('git/ref/'):
+                    with inner.lock:
+                        head = inner.head
+                    count = getattr(inner.local, 'reads', 0) + 1
+                    inner.local.reads = count
+                    if count <= 2:
+                        inner.barrier.wait(timeout=5)
+                    return dict(ref='refs/heads/controller-state-v1', object=dict(type='commit', sha=head))
+                with inner.lock:
+                    if method == 'GET':
+                        return copy.deepcopy(inner.docs[suffix])
+                    if suffix == 'git/blobs':
+                        raw = base64.b64decode(body['content']); sha = git_sha('blob', raw)
+                        inner.docs['git/blobs/'+sha] = dict(sha=sha, encoding='base64',
+                            size=len(raw), content=body['content'])
+                        return dict(sha=sha)
+                    if suffix == 'git/trees':
+                        sha = hashlib.sha1(encode(body)).hexdigest()
+                        inner.docs['git/trees/'+sha] = dict(sha=sha, truncated=False, tree=body['tree'])
+                        return dict(sha=sha)
+                    if suffix == 'git/commits':
+                        # Fixed timestamp: only parent/tree/message distinguish writes.
+                        sha = hashlib.sha1(encode(dict(body, timestamp=1000))).hexdigest()
+                        value = dict(sha=sha, tree=dict(sha=body['tree']),
+                                     parents=[dict(sha=p) for p in body['parents']])
+                        inner.docs['git/commits/'+sha] = value
+                        return copy.deepcopy(value)
+                    if method == 'PATCH':
+                        target = body['sha']; parent = inner.docs['git/commits/'+target]['parents'][0]['sha']
+                        if target != inner.head and parent != inner.head:
+                            raise StateBlocked('NON_FAST_FORWARD')
+                        inner.head = target
+                        return dict()
+                    raise AssertionError((method, path))
+        api = AtomicGit()
+        def worker(_):
+            """Attempt the identical fenced state from independent API clients."""
+            try:
+                GitHubState(api).save('a'*40, initial_state())
+                return True
+            except StateBlocked:
+                return False
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(worker, range(2)))
+        self.assertEqual(sum(results), 1)
 
 
 if __name__ == '__main__':

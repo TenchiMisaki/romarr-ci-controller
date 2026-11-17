@@ -71,11 +71,15 @@ def validate(state):
         raise StateBlocked('MULTIPLE_OUTSTANDING_CLAIMS')
     for key, alert in state['alerts'].items():
         if (not re.fullmatch('[0-9a-f]{64}', key) or type(alert) is not dict
-                or set(alert) != {'state', 'attempts', 'updated'}
+                or set(alert) != {'state', 'attempts', 'updated', 'claim_key', 'code'}
                 or alert['state'] not in {'PENDING', 'DELIVERY_UNCERTAIN', 'DELIVERED'}
                 or type(alert['attempts']) is not int or not 0 <= alert['attempts'] <= 3
                 or type(alert['updated']) is not int or alert['updated'] < 0):
             raise StateBlocked('ALERT_INVALID')
+        if (alert['claim_key'] not in state['claims'] or alert['code'] not in {
+                'MISSED_RUN', 'FAILED_RUN', 'COLLECTION_FAILED', 'REVIEW_FINDING', 'RECOVERY_REQUIRED'}
+                or hashlib.sha256((alert['claim_key'] + ':' + alert['code']).encode()).hexdigest() != key):
+            raise StateBlocked('ALERT_CLAIM_BINDING_INVALID')
     if state['last_tick'] is not None and (type(state['last_tick']) is not int or state['last_tick'] < 0):
         raise StateBlocked('CLOCK_INVALID')
     encode(state)
@@ -123,6 +127,13 @@ class Controller:
             return tick
         _, state = self.store.load()
         validate(state)
+        if deliver is not None:
+            pending = [(identifier, alert) for identifier, alert in state['alerts'].items()
+                if alert['state'] == 'PENDING' and alert['attempts'] < 3
+                and (alert['attempts'] == 0 or now - alert['updated'] >= 300)]
+            if pending:
+                _, alert = sorted(pending)[0]
+                return self.notify(key=alert['claim_key'], code=alert['code'], now=now, deliver=deliver)
         active = [(k, c) for k, c in state['claims'].items() if c['state'] not in TERMINAL]
         if active:
             key, claim = active[0]
@@ -135,6 +146,13 @@ class Controller:
             if deliver is not None:
                 self.notify(key=key, code='RECOVERY_REQUIRED', now=now, deliver=deliver)
             return 'RECONCILIATION_REQUIRED_NO_REDISPATCH'
+        pending_reviews = [(key, claim) for key, claim in state['claims'].items()
+            if claim['state'] == 'ADVISORY_COMPLETE' and claim['review'] != 'REVIEW_READY'
+            and claim['review_checks'] < 20
+            and (claim['last_review'] is None or now - claim['last_review'] >= 60)]
+        if pending_reviews and review_api is not None and thread_reader is not None:
+            key, _ = min(pending_reviews, key=lambda pair: (pair[1]['last_review'] or pair[1]['created'], pair[0]))
+            return self.refresh_review(key, now, review_api=review_api, thread_reader=thread_reader)
         if candidate is None:
             return 'NO_CANDIDATE_NOT_TESTED'
         if type(candidate) is not ExactPR:
@@ -291,6 +309,10 @@ class Controller:
                 raise StateBlocked('OBSERVATION_CLAIM_CHANGED')
             state['claims'][key]['state'] = result
             state['claims'][key]['review'] = review
+            if result == 'RUN_FAILED':
+                identifier = hashlib.sha256((key + ':FAILED_RUN').encode()).hexdigest()
+                state['alerts'].setdefault(identifier, dict(state='PENDING', attempts=0,
+                    updated=0, claim_key=key, code='FAILED_RUN'))
         self._change(update)
         return result
 
@@ -358,10 +380,11 @@ class Controller:
             prior = state['alerts'].get(alert_id)
             if prior and prior['state'] in {'DELIVERED', 'DELIVERY_UNCERTAIN'}:
                 return False
-            if prior and (prior['attempts'] >= 3 or now - prior['updated'] < 300):
+            if prior and (prior['attempts'] >= 3 or prior['attempts'] > 0 and now - prior['updated'] < 300):
                 return False
             state['alerts'][alert_id] = dict(state='DELIVERY_UNCERTAIN',
-                attempts=1 if prior is None else prior['attempts'] + 1, updated=now)
+                attempts=1 if prior is None else prior['attempts'] + 1, updated=now,
+                claim_key=key, code=code)
             return True
         if not self._change(reserve):
             return 'ALERT_ALREADY_DELIVERED_OR_RECONCILIATION_REQUIRED'
