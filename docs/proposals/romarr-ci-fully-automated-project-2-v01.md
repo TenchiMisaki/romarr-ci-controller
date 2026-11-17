@@ -661,6 +661,47 @@ NEW Run workflow invocation, completely replace the controller field with
 `CREATE_RETAINED_CANARY_ONLY`, and run once. Re-run jobs retains the rejected
 old input. Preserve all preceding run and canary evidence; do not weaken the pin.
 
+### Diagnostic exercise #44177202043 — SEVEN UNRECOGNIZED 422 RESPONSES
+
+Owner-triggered [run #44177202043](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44177202043),
+attempt 1, used correct main SHA `d97d9ac9` and approval text. It passed the gates
+and recorded eight created commits, one successful writer, zero classified
+conflicts and seven PATCH HTTP 422 / OTHER_RESPONSE failures. It blocked at
+RACE_VALIDATE with CANARY_RACE_WRITER_FAILED after 8.32s, before response-loss
+recovery. These are runner observations, not proof of seven non-fast-forward
+refusals. The exact response text/shape was not retained. Official
+[reference API documentation](https://docs.github.com/en/rest/git/refs) also uses
+422 for validation/spam failures, so do not accept all 422 responses as conflicts.
+
+Retained ref `heads/controller-canary-44177202043-1` points at
+`f260759d11860d75a6556b2f08c03ae67417b9b1`, sole parent seed
+`64ec6779449f5ad63d7ecac620984422c6d34a34`, sole parent main `d97d9ac9`.
+Independent REST/Git readback verifies both use tree `023ee9a1` and exact 96-byte
+canonical disabled state, SHA-256 `4b7cf0033429ef787b37bb343498d4c163d761c1311ef510b759cfb36bd50983`.
+Operational state remains `d2930189`. Preserve this and the prior canary branches.
+Artifact `14369833282` independently passes size 476, sole summary member, CRC,
+parsed counts/failures and SHA-256
+`51ecb1aaa0bb560bacf185ddaad9766144b336282e11b44bb7f59e5d96127705`.
+A disposable localhost real-urllib replay recognizes the original exact conflict
+message; it does not establish the unretained live message. No blanket conflict
+acceptance, protection changes, mutating retries or additional live run occurred.
+
+[Response-format diagnostics PR #42](https://github.com/TenchiMisaki/romarr-ci-controller/pull/42)
+prepares head `7c5752ebed1ba532baecda4d54128f3e71df09f6`, tree
+`8c53bef331d579153c091e20e5cde6b3ac24a422`, on base `d97d9ac9`.
+It adds bounded response shape, read/encoding categories and message/captured-body
+SHA-256 commitments, with at most eight error items and no raw text, bodies,
+headers, URLs or credentials. Fixed diagnostic vocabulary never accepts a new
+conflict response. Oversized, malformed and invalid message shapes are explicit.
+Twenty-one focused local tests, compilation, whitespace and exact candidate/server
+Gitleaks tree/history checks PASS.
+[CI #44178815763](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44178815763)
+passed **495 unittest cases / 3 Windows-only skips / 296 pytest cases**, compilation,
+artifact and read-only monitor steps. CI merge `d2309cb6` has exact tree `8c53bef3`
+and parents `d97d9ac9` / `7c5752eb`; its tree/history scans PASS.
+Exact-head CodeRabbit review PENDING. No live provider behavior is claimed fixed.
+Any further mutating diagnostic run requires owner authorization after review.
+
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
 The owner explicitly approved the exact disabled bootstrap and additive
