@@ -55,6 +55,9 @@ Collection errors do not imply clean review. This implementation records finding
 and next states; it does not autonomously modify source or call a coding agent.
 The cycle schedules pending completed-advisory review refreshes within the
 persistent budget; review-ready claims are not repeatedly polled.
+An independently verified changed PR/head/base retires its obsolete completed
+review as SOURCE_STALE and permits the fresh candidate in the same cycle. Invalid
+collection remains blocked; it is never silently reclassified as source change.
 Authorized repairs still use the ordinary isolated-branch test/review process.
 
 Stage 8 keeps test acceptance separate from advisory completion. The configured

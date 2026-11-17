@@ -52,6 +52,7 @@ class Ports:
         self.posts, self.sources, self.legacy = 0, 0, False
         self.after_source = None
         self.response_status = 200
+        self.dispatch_id = 123
         self.error = False
         self.owner_id = 71314201
 
@@ -79,8 +80,8 @@ class Ports:
             f"b-{inputs['base_sha']} claim-{inputs['claim_nonce']}")
         if self.error:
             raise TimeoutError('synthetic response loss')
-        path = f'{CONTROLLER_REPO}/actions/runs/123'
-        return self.response_status, dict(workflow_run_id=123,
+        path = f'{CONTROLLER_REPO}/actions/runs/{self.dispatch_id}'
+        return self.response_status, dict(workflow_run_id=self.dispatch_id,
             run_url=f'https://api.github.com/repos/{path}', html_url=f'https://github.com/{path}')
 
     def run(self, run_id):
@@ -418,6 +419,29 @@ class CycleTests(unittest.TestCase):
         self.assertEqual(self.controller.cycle(1000, deliver=deliver), 'RUN_FAILED')
         self.assertEqual(self.controller.cycle(1300, deliver=deliver), 'DELIVERY_VERIFIED')
         self.assertEqual(len(calls), 2)
+
+    def test_stale_completed_review_does_not_starve_new_head_in_same_cycle(self):
+        key, _ = self.observe(findings=True, unresolved=1)
+        self.ports.pr['head']['sha'] = 'd'*40
+        self.ports.dispatch_id = 124
+        self.ports.observed.update(id=124, status='queued', conclusion=None,
+            html_url=f'https://github.com/{CONTROLLER_REPO}/actions/runs/124')
+        fresh = ExactPR(42, 'd'*40, 'b'*40)
+        result = self.controller.cycle(1000, candidate=fresh, review_api=ReviewAPI(),
+            thread_reader=lambda number, sha: dict(state='VERIFIED', unresolved=0))
+        self.assertEqual(result, 'DISPATCHED_NOT_TEST_ACCEPTED')
+        self.assertEqual(self.store.value['claims'][key]['state'], 'SOURCE_STALE')
+        self.assertEqual(len(self.store.value['claims']), 2)
+        self.assertEqual(self.ports.posts, 2)
+
+    def test_invalid_collection_is_not_reclassified_as_stale_review(self):
+        key, _ = self.observe(findings=True, unresolved=1)
+        self.ports.pr = {}
+        with self.assertRaises(IdentityRejected):
+            self.controller.cycle(1000, candidate=self.source, review_api=ReviewAPI(),
+                thread_reader=lambda number, sha: dict(state='VERIFIED', unresolved=0))
+        self.assertEqual(self.store.value['claims'][key]['state'], 'ADVISORY_COMPLETE')
+        self.assertEqual(self.ports.posts, 1)
 
 
 class GitAPI:

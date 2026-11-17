@@ -13,7 +13,7 @@ import uuid
 from durable_state import StateBlocked, encode, transact
 from stage6_dispatch_ledger import _source
 from stage6_dispatch_response import dispatch_run_id
-from stage6_pr_identity_v32 import CONTROLLER_REPO, ExactPR, SHA
+from stage6_pr_identity_v32 import CONTROLLER_REPO, ExactPR, IdentityRejected, SHA
 from status import review_status
 
 WORKFLOW = '.github/workflows/stage6-pr-manual-candidate.yml'
@@ -152,7 +152,15 @@ class Controller:
             and (claim['last_review'] is None or now - claim['last_review'] >= 60)]
         if pending_reviews and review_api is not None and thread_reader is not None:
             key, _ = min(pending_reviews, key=lambda pair: (pair[1]['last_review'] or pair[1]['created'], pair[0]))
-            return self.refresh_review(key, now, review_api=review_api, thread_reader=thread_reader)
+            try:
+                return self.refresh_review(key, now, review_api=review_api, thread_reader=thread_reader)
+            except IdentityRejected:
+                _, refreshed = self.store.load()
+                validate(refreshed)
+                if refreshed['claims'][key]['state'] != 'SOURCE_STALE':
+                    raise
+                if candidate is None:
+                    return 'SOURCE_STALE'
         if candidate is None:
             return 'NO_CANDIDATE_NOT_TESTED'
         if type(candidate) is not ExactPR:
@@ -336,18 +344,36 @@ class Controller:
             return dict(claim)
         claim = self._change(reserve)
         source = ExactPR(claim['pr'], claim['head'], claim['base'])
-        pr, branch = self.ports.source(source)
-        _source(pr, branch, source)
+        self._review_source(key, claim, source)
         result = review_status(review_api, {'number': claim['pr'], 'sha': claim['head']},
                                thread_reader=thread_reader)['status']
-        pr, branch = self.ports.source(source)
-        _source(pr, branch, source)
+        self._review_source(key, claim, source)
         def update(state):
             if state['claims'].get(key) != claim:
                 raise StateBlocked('REVIEW_CLAIM_CHANGED')
             state['claims'][key]['review'] = result
         self._change(update)
         return result
+
+    def _review_source(self, key, claim, source):
+        """Retire only a proven changed source; preserve collection rejection."""
+        pr, branch = self.ports.source(source)
+        try:
+            _source(pr, branch, source)
+        except IdentityRejected:
+            try:
+                current = ExactPR(pr['number'], pr['head']['sha'], pr['base']['sha'])
+                _source(pr, branch, current)
+                if current == source or current.pr_number != source.pr_number:
+                    raise IdentityRejected('SOURCE_CHANGE_NOT_ESTABLISHED')
+            except (KeyError, TypeError, IdentityRejected):
+                raise IdentityRejected('SOURCE_COLLECTION_OR_IDENTITY_UNVERIFIED') from None
+            def retire(state):
+                if state['claims'].get(key) != claim:
+                    raise StateBlocked('STALE_REVIEW_CLAIM_CHANGED')
+                state['claims'][key]['state'] = 'SOURCE_STALE'
+            self._change(retire)
+            raise IdentityRejected('REVIEW_SOURCE_STALE') from None
 
     def tick(self, now, interval=300):
         """Deduplicate native/fallback ticks; fail closed on time regression."""
