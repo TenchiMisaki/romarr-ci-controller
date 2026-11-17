@@ -355,6 +355,39 @@ receipts, caller identity, native/fallback collisions, alert delivery and recove
 remain separate acceptance gates. No schedule, fallback, permissions or source
 execution was changed. Stage 5 operational acceptance remains IN PROGRESS.
 
+### Retained native/manual monitor artifacts — verified November 17
+
+This closes the earlier sampled artifact-byte inspection gap only; it does not
+supersede the partial scheduling or operational-acceptance limits above.
+Independent connector download of the retained summary from native schedule
+[run #44084226387](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44084226387)
+(artifact `14328945959`, controller `3f4ee847`) and external workflow-dispatch
+[run #44154567953](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44154567953)
+(artifact `14359254374`, controller `8a981726`, attempt 1) produced the exact
+819-byte ZIPs matching their independently collected SHA-256 metadata:
+
+| Run | Archive SHA-256 |
+| --- | --- |
+| `44084226387` | `fd2f15cbc04e972db1ad35ad9ca11acfc4a5dc10519f8bd9dc475f7b5d734b77` |
+| `44154567953` | `6df06dd5d7a7e5fef7b651e2dbec6170bff6c938494ee7c09603ddeff33d2400` |
+
+Both contain only the regular `romarr-monitor-summary.md`, with valid CRC, UTF-8,
+no archive/member comments or central extra fields. The 1,065-byte Markdown is
+byte-identical across both, SHA-256
+`ba1c0c79cdc82473f5020ac680c0bf804e6434194ad40cd277aed0aa8de95de9`.
+Its inspected content explicitly distinguishes historical receipt metadata and
+review readiness from passing tests, reports no eligible new unclaimed revision,
+and states that no completed claimed receipt was eligible for inspection. It
+contains no raw source-test logs or private paths. This is point-in-time retained
+monitor evidence, not complete source receipt validation, public-history security
+certification, a current PR-status guarantee or actual scheduler acceptance.
+The external run's collection/finalization/publication/upload steps all passed;
+artifact metadata binds the run/controller and seven-day retention. No new run,
+source dispatch, schedule, caller credential or production mutation was requested.
+The latest native scheduled run is still the recorded 12:33 UTC sample; the
+native cadence gap therefore remains unresolved. Actual external-caller identity,
+collision/duplicate behavior, alert delivery and recovery remain NOT TESTED.
+
 ### Anonymous source receipt serialization — PR #38 MERGED
 
 [PR #38](https://github.com/TenchiMisaki/romarr-ci-controller/pull/38) adds the
