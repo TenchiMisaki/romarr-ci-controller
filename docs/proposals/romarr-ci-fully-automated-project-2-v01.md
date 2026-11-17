@@ -132,11 +132,11 @@ tests do not establish authenticated GitHub mutations, distributed scheduling,
 credential transport or operational acceptance. Production code, workflows,
 credentials, state branches, tags and source execution remain unchanged.
 
-### Deployment prerequisite collector — IN PROGRESS
+### Deployment prerequisite collector — COMPLETE (read-only increment)
 
-[PR #35](https://github.com/TenchiMisaki/romarr-ci-controller/pull/35) is OPEN /
-UNMERGED at `d8a54b7c9e2322cf78ccdc0a3942e2a586c727f0`, based on merged
-`fdb013cd`. The dormant read-only collector reuses canonical Git state validation
+[PR #35](https://github.com/TenchiMisaki/romarr-ci-controller/pull/35) is **MERGED**
+into main at `7a90efff5ac384a2e2319bc727137a2a2df24c1c`; reviewed head
+`d8a54b7c9e2322cf78ccdc0a3942e2a586c727f0`, based on merged `fdb013cd`. The dormant read-only collector reuses canonical Git state validation
 and exact revision-tag verification, adds fixed numeric repository/owner gates,
 allows only required GET paths, rechecks identity and cannot authorize activation
 or dispatch. GET 404 is classified **NOT FOUND OR NOT VISIBLE**, distinct from
@@ -146,7 +146,17 @@ Local Linux/Python 3.12.14: **68 focused tests PASS**, including 13 new cases wi
 real disposable Git state; compilation/whitespace PASS. Gitleaks 8.30.1 final-tree,
 outgoing-history and exact-server-history scans passed with zero findings and a
 verified scanner/positive control. Tree `f5594b08b85b6119e3c2fa9d339f9f0805517f27`
-matches the scanned bytes. Hosted CI and exact-head CodeRabbit are PENDING.
+matches the scanned bytes.
+[Hosted CI #44129151304](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44129151304)
+passed **427 unittest cases / 3 Windows-only skips** and **296 pytest cases**,
+compilation, public-artifact and live read-only smoke checks. CI merge
+`3a55820c571e36a8946cb22eff3c21f94ce14655` has the exact scanned tree and parents
+`fdb013cd` / `d8a54b7c`; its complete tree/history security scans also passed.
+[Final CodeRabbit assessment](https://github.com/TenchiMisaki/romarr-ci-controller/pull/35#issuecomment-6954550022)
+covers exact head `d8a54b7c`, with no actionable findings and no review threads.
+Independent main/commit readback verifies merge `7a90efff` has the exact tested
+and scanned tree, with parents `fdb013cd` / `d8a54b7c`. This completes the dormant
+read-only collector increment; it does not establish deployment acceptance.
 
 A live read-only run of the actual collector through an authenticated connector
 bridge verified repository identity and independent readback at controller
@@ -231,15 +241,38 @@ privacy/provenance review completed. No substantial third-party source was copie
 No release builds/publishing, new credentials, source/platform scheduler,
 automatic remediation, production changes or fallback retirement were introduced.
 
+### Stage 5 schedule observations — PARTIAL EVIDENCE
+
+A November 17 authenticated API read found nine native `schedule` monitor runs,
+all successful. Observed creation gaps range from **206 to 579 minutes**, so this
+does not establish the configured five-minute native cadence. The latest native
+[run #44084226387](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44084226387)
+used controller `3f4ee847`; its read-only audit, receipt inspection, summary and
+artifact steps passed. This is observed execution, not proof of each expected
+trigger or the reason for unobserved events.
+
+The latest 20 `workflow_dispatch` monitor runs, from November 17 13:34–16:44 UTC,
+all succeeded at roughly ten-minute intervals. The latest
+[run #44129126445](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44129126445)
+used `fdb013cd`, with all read-only job steps passed. API metadata identifies one
+unexpired, run-bound sanitized-summary artifact for each latest native/manual
+sample, with a digest and seven-day expiry. Artifact ZIP bytes were NOT downloaded
+or independently validated in this observation; summary content, complete source
+receipts, caller identity, native/fallback collisions, alert delivery and recovery
+remain separate acceptance gates. No schedule, fallback, permissions or source
+execution was changed. Stage 5 operational acceptance remains IN PROGRESS.
+
 ### Remaining operational gates and execution limits
 
-**Post-merge live preflight — November 17, 2026:** current main is
-`485bb794d08fbded30ca80f5c735d3e3d9bcf2b7`. Independent authenticated GitHub
+**Earlier post-PR #33 preflight — historical November 17 checkpoint:** the
+examined main was `485bb794d08fbded30ca80f5c735d3e3d9bcf2b7`; current verified
+main is `7a90efff5ac384a2e2319bc727137a2a2df24c1c` after PR #35. Independent authenticated GitHub
 reads returned 404 for the dedicated `controller-state-v1` branch and the exact
 `controller-revision-485bb794d08fbded30ca80f5c735d3e3d9bcf2b7` tag. The existing
 manual exact-PR advisory workflow is present at this revision. Real durable-backend
 race/restart/dispatch acceptance is therefore **BLOCKED: storage and immutable
-revision prerequisites are not provisioned**. No canary, state/tag creation,
+revision prerequisites were not independently established**. The newer collector
+above correctly preserves 404 absence/visibility ambiguity. No canary, state/tag creation,
 security-setting change or source dispatch was performed by this preflight.
 
 The implementation still has no installed authenticated owner entrypoint bound to
@@ -277,8 +310,8 @@ remain preserved here; no private content or package is copied into this reposit
   their prepared artifacts and supported isolated executors. No platform acceptance
   is inferred from controller integration or contract tests.
 - Next: continue the existing hosted owner-control, complete-receipt,
-  state/dispatch/recovery acceptance path from merged `fdb013cd`. The local Git
-  integration increment is complete; do not repeat its accepted tests or create a
+  state/dispatch/recovery acceptance path from merged `7a90efff`. Local Git
+  integration and the read-only prerequisite collector are complete; do not repeat its accepted tests or create a
   redundant tracker. Keep live acceptance gates and unattended operation disabled.
 
 ## Current Stage 6 continuation — November 16, 2026 (Pacific)
