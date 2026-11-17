@@ -40,6 +40,8 @@ def validate(document):
         'path':'${{ runner.temp }}/controller-canary-summary.json','if-no-files-found':'error','retention-days':'7'})
     require(all('run' not in x for i,x in enumerate(steps) if i != 2))
     require(all('env' not in x for i,x in enumerate(steps) if i != 2))
+    require(all('shell' not in step for step in steps))
+    require('defaults' not in document and 'defaults' not in job)
 
 
 class StateCanaryWorkflowTests(unittest.TestCase):
@@ -61,13 +63,16 @@ class StateCanaryWorkflowTests(unittest.TestCase):
         with self.assertRaises(ValueError):validate(changed)
 
     def test_privilege_command_and_artifact_drift_rejected(self):
-        for mutation in ('permission','credentials','command','artifact','gate'):
+        for mutation in ('permission','credentials','command','artifact','gate','step_shell','job_shell','workflow_shell'):
             changed=copy.deepcopy(self.document); job=changed['jobs']['canary']
             if mutation=='permission':job['permissions']['actions']='write'
             if mutation=='credentials':job['steps'][0]['with']['persist-credentials']='true'
             if mutation=='command':job['steps'][2]['run']='python controller/watch.py dispatch'
             if mutation=='artifact':job['steps'][3]['with']['path']='.'
             if mutation=='gate':job['if']='true'
+            if mutation=='step_shell':job['steps'][2]['shell']='python {0}'
+            if mutation=='job_shell':job['defaults']={'run':{'shell':'python {0}'}}
+            if mutation=='workflow_shell':changed['defaults']={'run':{'shell':'python {0}'}}
             with self.subTest(mutation=mutation),self.assertRaises(ValueError):validate(changed)
 
 
