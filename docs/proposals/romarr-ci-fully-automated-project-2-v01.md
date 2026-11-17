@@ -86,6 +86,46 @@ Detailed design/recovery:
 These are implementation and controller-test results, not live hosted durable
 storage, dispatch/recovery, owner-control, complete receipt or scheduler acceptance.
 
+### Stage 6 real Git integration — IN PROGRESS
+
+[PR #34](https://github.com/TenchiMisaki/romarr-ci-controller/pull/34), branch
+`review/stage6-git-state-integration`, is OPEN / UNMERGED at
+`78c7d55581f895731a1ce5c6f286fb17f3f7e4a8`, based on main `485bb794`.
+Seven new integration tests use disposable bare repositories, real object IDs,
+sole-parent commits, ancestry, expected-old ref transactions and strict Git fsck.
+Eight same-parent/same-second writers have exactly one successful distinct fence;
+a controlled nonce collision reproduces eight idempotent successes. A lost fence
+response persists the uncertain claim into a separate Python process and never
+dispatches; rejected fences preserve reservations, stale leases create no extra
+objects/writes, and Git-valid noncanonical state is rejected.
+
+Local Linux/Python 3.12.14: **58 focused controller/integration tests PASS**,
+including all seven new tests; compilation/whitespace checks PASS. The new
+[hosted CI #44124206164](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44124206164)
+passed **414 unittest cases / 3 Windows-only skips**, **296 Stage 6 pytest cases**,
+compilation, public-artifact and live read-only smoke checks. Gitleaks 8.30.1
+complete-tree, outgoing-history and exact-server-history scans passed with zero
+findings; the official scanner release archive digest and positive control passed.
+Initial server tree `11fe1c70cca1ed91c062de4c92f47ec27c8a4fe9` matched scanned bytes.
+[Initial CodeRabbit review](https://github.com/TenchiMisaki/romarr-ci-controller/pull/34#pullrequestreview-5942291879)
+found one valid test gap: a read-only restart adapter could mask a regressed fence.
+Correction `78c7d555` uses a fresh writable adapter and requires exact
+`DISPATCH_FENCE_REJECTED`, unchanged persisted head/state, zero created commits,
+zero PATCH attempts and no dispatch. All 58 focused tests passed again. Corrected
+server tree `9522e1a2d74fc9987c9f21e63949431189bf496e` matches the zero-finding
+complete-tree/outgoing/exact-server-history scans.
+[Corrected-head CI #44125967968](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44125967968)
+passed **414 unittest cases / 3 Windows-only skips** and **296 pytest cases**,
+compilation, public-artifact and live read-only checks. Its merge tree is exactly
+`9522e1a2d74fc9987c9f21e63949431189bf496e`, with parents main `485bb794` and
+reviewed head `78c7d555`. CodeRabbit marked the original thread resolved;
+its substantive revised-head review remains IN PROGRESS. Merge remains pending.
+
+The REST boundary is modeled; real Git object/ref behavior is exercised. These
+tests do not establish authenticated GitHub mutations, distributed scheduling,
+credential transport or operational acceptance. Production code, workflows,
+credentials, state branches, tags and source execution remain unchanged.
+
 ### Cross-platform increment
 
 [PR #33](https://github.com/TenchiMisaki/romarr-ci-controller/pull/33), branch
@@ -179,11 +219,16 @@ operational gates. Provisioning must preserve role isolation, immutable-ref and
 state protections, prepublication scanning and recoverable originals; it must not
 be bundled with unattended enablement or credential-service deployment.
 
-Private owner-guidance original-byte transfer was retried with the current helper
-and failed at service discovery with DNS before any file download/replacement.
-Permanent private-reference publication and Project Instructions synchronization
-remain **BLOCKED / PENDING**, respectively. Existing public continuity rules are
-preserved in this companion; no local candidate is claimed published privately.
+The previous session's private owner-guidance original-byte transfer failed at
+service discovery with DNS before download/replacement. The resumed session has
+the complete supplied 19-file project snapshot and direct Git transport. An
+owner-requested continuity/recovery amendment package is now **PREPARED / VERIFIED**
+with three amended references, all 19 exact protected originals, semantic
+cross-reference positive/negative checks, strict ZIP inventory and CRC validation.
+It was saved and made available privately. Actual protected-destination publication,
+OneDrive synchronization and Project Instructions remain **NOT VERIFIED / PENDING**;
+package availability is not active publication. Existing public continuity rules
+remain preserved here; no private content or package is copied into this repository.
 
 - Complete independent source/test/JUnit/skip/job/artifact receipt acceptance;
   the preserved 70-case manual workflow remains advisory.
@@ -195,14 +240,16 @@ preserved in this companion; no local candidate is claimed published privately.
 - Separately owner-authorized bounded unattended trial and primary-method handoff;
   preserve the independent manual fallback until separate retirement approval.
 - Live platform probes require a supported disposable executor and prepared
-  immutable artifacts. The current local environment has no Docker and only
-  Python 3.15; direct GitHub transport fails DNS. Connected GitHub reads/writes
-  remain usable for reviewed publication and hosted controller tests. No live
-  Docker, ROMarr Windows 3.11/3.13, EXE or signed-network-attestation acceptance
-  is inferred from offline fixtures.
-- Next: complete exact-head reviews and legitimate corrections, reconcile hosted
-  matrix results, merge only after applicable gates, then risk-appropriate combined
-  source validation. Continue independent development without enabling operation.
+  immutable artifacts. The prior workstation had no Docker and only Python 3.15,
+  with failed direct Git DNS. The resumed controller-only Linux workspace has
+  Python 3.12.14 and working Git transport; Docker is unavailable. ROMarr Windows
+  3.11/3.13, packaged EXE, live images and signed-attestation acceptance still need
+  their prepared artifacts and supported isolated executors. No platform acceptance
+  is inferred from controller integration or contract tests.
+- Next: complete PR #34 exact-head review, address valid findings, and merge only
+  after its unchanged-source CI/security/ancestry gates. Then continue the existing
+  hosted owner-control, complete-receipt, state/dispatch/recovery acceptance path;
+  do not create a redundant tracker or enable unattended operation.
 
 ## Current Stage 6 continuation — November 16, 2026 (Pacific)
 
