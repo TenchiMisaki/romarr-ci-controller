@@ -98,6 +98,25 @@ deduplication and uncertain send recovery, redirect rejection and bounded retrie
 These use simulated authenticated APIs; they are not live hosted mutation tests.
 Exact-head hosted CI, review and security results belong in the linked review PR.
 
+### Real local Git integration coverage
+
+`tests/test_git_state_integration.py` supplements the existing object-map fixtures
+with disposable bare repositories and real Git blob/tree/commit IDs, ancestry
+checks, expected-old ref transactions and strict object-integrity validation.
+Eight writers observe the same parent and fixed timestamp; only one distinct
+commit may advance the ref. A controlled nonce collision reproduces eight
+idempotent successes, demonstrating sensitivity to the retired duplicate-fence
+defect. The modeled REST boundary accepts existing-target updates and rejects
+non-fast-forward siblings; it is not an authenticated GitHub server.
+
+Lost fence-response tests reopen the stored uncertain claim in a separate Python
+process, and verify that the coordinator never dispatched. Rejected fences retain
+their original reservation; stale leases create no additional objects or mutation
+attempts. Git-valid but noncanonical state bytes are rejected. No production state
+branch, revision tag, credential, workflow permission or source execution changes
+are needed for these tests. Real hosted races, transport/authentication and owner
+activation remain independent acceptance gates.
+
 Before operational acceptance: independently validate a complete trusted receipt
 contract and isolated full-scope source runner; source/job/artifact/skip policy;
 owner arm/disarm entrypoint and deployment record; state-branch permissions and
