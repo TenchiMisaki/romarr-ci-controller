@@ -9,6 +9,8 @@ from __future__ import annotations
 import base64
 from concurrent.futures import ThreadPoolExecutor
 import datetime
+import hashlib
+from http.client import IncompleteRead
 import json
 import os
 from pathlib import Path
@@ -36,15 +38,60 @@ class SimulatedResponseLoss(Exception):
     """Only the deliberate post-success injection, never a transport timeout."""
 
 
+def response_fingerprint(raw):
+    """Bounded schema and message commitments, never raw provider error text."""
+    if type(raw) is not bytes or len(raw) > MAX_RESPONSE + 1:
+        raise StateBlocked('CANARY_DIAGNOSTIC_INVALID')
+    def message(value):
+        if type(value) is not str:
+            return dict(kind='NON_STRING')
+        try:
+            data=value.encode('utf-8')
+        except UnicodeError:
+            return dict(kind='INVALID_UNICODE')
+        if len(data)>4096:
+            return dict(kind='OVERSIZED')
+        normalized=' '.join(value.lower().replace('-', ' ').rstrip('.').split())
+        known = {'update is not a fast forward':'NON_FAST_FORWARD_VARIANT',
+                 'reference update failed':'REFERENCE_UPDATE_FAILED',
+                 'validation failed':'VALIDATION_FAILED'}.get(normalized,'OTHER')
+        return dict(kind=known,bytes=len(data),sha256=hashlib.sha256(data).hexdigest())
+    result=dict(captured_bytes=len(raw),captured_sha256=hashlib.sha256(raw).hexdigest())
+    if len(raw)>MAX_RESPONSE:
+        return dict(result,shape='OVERSIZED_RESPONSE')
+    try:
+        payload=json.loads(raw)
+    except (ValueError,UnicodeError,RecursionError):
+        return dict(result,shape='MALFORMED_JSON')
+    if type(payload) is not dict:
+        return dict(result,shape='NON_OBJECT_JSON')
+    nested=payload.get('error')
+    result.update(shape='OBJECT',message=message(payload.get('message')),
+                  error_message=message(nested.get('message') if type(nested) is dict else nested))
+    errors=payload.get('errors')
+    if type(errors) is list:
+        result['errors_truncated']=len(errors)>8
+        result['errors']=[message(item.get('message') if type(item) is dict else item)
+                          for item in errors[:8]]
+    else:
+        result['errors_kind']='ABSENT_OR_NON_LIST'
+    return result
+
+
 class CanaryHTTPFailure(StateBlocked):
     """Bounded public HTTP metadata; never retain a response body or URL."""
-    def __init__(self, status, method, reason):
+    def __init__(self, status, method, reason, response_body=None,
+                 body_read='SUCCESS', encoding='identity'):
         if (type(status) is not int or not 100 <= status <= 599
                 or method not in {'GET', 'POST', 'PATCH'}
-                or reason not in {'REFERENCE_UPDATE_FAILED', 'OTHER_RESPONSE'}):
+                or reason not in {'REFERENCE_UPDATE_FAILED', 'OTHER_RESPONSE'}
+                or body_read not in {'SUCCESS','TIMEOUT','IO_ERROR','INCOMPLETE'}
+                or encoding not in {'identity','gzip','br','deflate','OTHER'}):
             raise StateBlocked('CANARY_DIAGNOSTIC_INVALID')
         super().__init__('CANARY_API_REQUEST_REJECTED')
         self.status, self.method, self.reason = status, method, reason
+        self.response = None if response_body is None else dict(
+            response_fingerprint(response_body),body_read=body_read,encoding=encoding)
 
 
 SAFE_FAILURE_CODES = frozenset({
@@ -60,8 +107,11 @@ SAFE_FAILURE_CODES = frozenset({
 def failure_evidence(error):
     """Fixed categories/allowlisted codes only; exception text stays private."""
     if isinstance(error, CanaryHTTPFailure):
-        return dict(category='HTTP_REJECTED', status=error.status,
+        result=dict(category='HTTP_REJECTED', status=error.status,
                     method=error.method, reason=error.reason)
+        if error.response is not None:
+            result['response']=error.response
+        return result
     if isinstance(error, StateBlocked):
         code = str(error)
         return dict(category='STATE_BLOCKED',
@@ -264,15 +314,36 @@ class Wire:
                 return json.loads(data)
         except HTTPError as error:
             code=error.code
-            try: payload=json.loads(error.read(MAX_RESPONSE+1))
-            except (ValueError, OSError): payload={}
-            error.close()
+            body_read='SUCCESS'
+            try:
+                encoding=(error.headers or {}).get('Content-Encoding','identity').lower()
+                if encoding not in {'identity','gzip','br','deflate'}:
+                    encoding='OTHER'
+                try:
+                    raw_error=error.read(MAX_RESPONSE+1)
+                except IncompleteRead as incomplete:
+                    raw_error=(incomplete.partial[:MAX_RESPONSE+1]
+                               if type(incomplete.partial) is bytes else b'')
+                    body_read='INCOMPLETE'
+                except TimeoutError:
+                    raw_error=b''
+                    body_read='TIMEOUT'
+                except OSError:
+                    raw_error=b''
+                    body_read='IO_ERROR'
+            finally:
+                error.close()
+            try:
+                payload=(json.loads(raw_error) if body_read=='SUCCESS'
+                         and len(raw_error)<=MAX_RESPONSE else {})
+            except (ValueError, UnicodeError, RecursionError):
+                payload={}
             if (method=='PATCH' and code==422 and type(payload) is dict
                     and payload.get('message')=='Update is not a fast forward'):
                 raise CanaryConflict('CANARY_NON_FAST_FORWARD_REJECTED') from None
             reason = ('REFERENCE_UPDATE_FAILED' if type(payload) is dict
                       and payload.get('message') == 'Reference update failed' else 'OTHER_RESPONSE')
-            raise CanaryHTTPFailure(code, method, reason) from None
+            raise CanaryHTTPFailure(code, method, reason, raw_error, body_read, encoding) from None
 
 
 def main():

@@ -12,7 +12,7 @@ from urllib.error import HTTPError
 from controller_cycle import initial_state
 from durable_state import PREFIX, STATE_REF, StateBlocked, encode
 from hosted_state_canary import (APPROVAL, CanaryAPI, CanaryConflict, Wire, context, exercise, main,
-    CanaryHTTPFailure, failure_evidence)
+    CanaryHTTPFailure, failure_evidence, response_fingerprint)
 from test_git_state_integration import LocalGitAPI
 
 REF='heads/controller-canary-123-1'
@@ -161,8 +161,102 @@ class CanaryTests(unittest.TestCase):
             with patch('hosted_state_canary.build_opener',return_value=Opener()):
                 with self.assertRaises(CanaryHTTPFailure) as caught:
                     Wire('synthetic-fixture')('PATCH',PREFIX+'git/refs/'+REF,dict(sha='a'*40,force=False))
-            self.assertEqual(failure_evidence(caught.exception),dict(
+            observed=failure_evidence(caught.exception)
+            response=observed.pop('response')
+            self.assertEqual(observed,dict(
                 category='HTTP_REJECTED',status=status,method='PATCH',reason=reason))
+            self.assertEqual(response['body_read'],'SUCCESS')
+            self.assertEqual(response['encoding'],'identity')
+            self.assertNotIn(message,json.dumps(response))
+            self.assertNotIsInstance(caught.exception,CanaryConflict)
+
+    def test_response_fingerprints_commit_messages_without_exporting_text(self):
+        import hashlib
+        private='sensitive fixture phrase'
+        raw=json.dumps(dict(message=private,errors=[dict(message='Update is not a fast-forward.')],
+            error=dict(message='Validation Failed'))).encode()
+        observed=response_fingerprint(raw)
+        self.assertEqual(observed['message']['sha256'],hashlib.sha256(private.encode()).hexdigest())
+        self.assertEqual(observed['message']['kind'],'OTHER')
+        self.assertEqual(observed['errors'][0]['kind'],'NON_FAST_FORWARD_VARIANT')
+        self.assertEqual(observed['error_message']['kind'],'VALIDATION_FAILED')
+        self.assertNotIn(private,json.dumps(observed))
+        self.assertNotIn('Update is not a fast-forward.',json.dumps(observed))
+
+    def test_response_fingerprints_bound_error_lists_and_malformed_content(self):
+        observed=response_fingerprint(json.dumps(dict(message='x'*4097,
+            errors=[dict(message='sensitive fixture phrase')]*10)).encode())
+        self.assertEqual(observed['message'],dict(kind='OVERSIZED'))
+        self.assertEqual(len(observed['errors']),8)
+        self.assertTrue(observed['errors_truncated'])
+        self.assertEqual(response_fingerprint(b'not JSON')['shape'],'MALFORMED_JSON')
+        self.assertEqual(response_fingerprint(b'[]')['shape'],'NON_OBJECT_JSON')
+        self.assertEqual(response_fingerprint(b'{"message":42}')['message']['kind'],'NON_STRING')
+        with self.assertRaises(StateBlocked):response_fingerprint(b'x'*2_000_002)
+
+    def test_punctuation_variant_diagnostic_never_counts_as_conflict(self):
+        raw=json.dumps(dict(message='Update is not a fast-forward.')).encode()
+        class Opener:
+            def open(self,req,timeout):
+                raise HTTPError(req.full_url,422,'private',{},io.BytesIO(raw))
+        with patch('hosted_state_canary.build_opener',return_value=Opener()):
+            with self.assertRaises(CanaryHTTPFailure) as caught:
+                Wire('synthetic-fixture')('PATCH',PREFIX+'git/refs/'+REF,dict(sha='a'*40,force=False))
+        self.assertEqual(failure_evidence(caught.exception)['response']['message']['kind'],
+            'NON_FAST_FORWARD_VARIANT')
+        self.assertNotIsInstance(caught.exception,CanaryConflict)
+
+    def test_error_body_read_and_encoding_evidence_remain_failures(self):
+        class BrokenBody(io.BytesIO):
+            def read(self,*args):raise TimeoutError('sensitive fixture phrase')
+        for body,headers,expected_read,expected_encoding in [
+                (BrokenBody(),{},'TIMEOUT','identity'),
+                (io.BytesIO(b'compressed fixture'),{'Content-Encoding':'gzip'},'SUCCESS','gzip')]:
+            class Opener:
+                def open(self,req,timeout):
+                    raise HTTPError(req.full_url,422,'private',headers,body)
+            with patch('hosted_state_canary.build_opener',return_value=Opener()):
+                with self.assertRaises(CanaryHTTPFailure) as caught:
+                    Wire('synthetic-fixture')('PATCH',PREFIX+'git/refs/'+REF,dict(sha='a'*40,force=False))
+            result=failure_evidence(caught.exception)['response']
+            self.assertEqual(result['body_read'],expected_read)
+            self.assertEqual(result['encoding'],expected_encoding)
+            self.assertNotIn('sensitive fixture phrase',json.dumps(result))
+        self.assertEqual(response_fingerprint(b'x'*2_000_001)['shape'],'OVERSIZED_RESPONSE')
+
+    def test_deep_json_retains_known_http_status_and_capture_digest(self):
+        import hashlib
+        raw=b'['*10000+b'0'+b']'*10000
+        self.assertEqual(response_fingerprint(raw)['shape'],'MALFORMED_JSON')
+        class Opener:
+            def open(self,req,timeout):
+                raise HTTPError(req.full_url,422,'private',{},io.BytesIO(raw))
+        with patch('hosted_state_canary.build_opener',return_value=Opener()):
+            with self.assertRaises(CanaryHTTPFailure) as caught:
+                Wire('synthetic-fixture')('PATCH',PREFIX+'git/refs/'+REF,dict(sha='a'*40,force=False))
+        result=failure_evidence(caught.exception)
+        self.assertEqual(result['status'],422)
+        self.assertEqual(result['response']['captured_sha256'],hashlib.sha256(raw).hexdigest())
+        self.assertEqual(result['response']['shape'],'MALFORMED_JSON')
+
+    def test_incomplete_error_body_is_closed_bounded_and_never_a_conflict(self):
+        from http.client import IncompleteRead
+        for partial in (json.dumps(dict(message='Update is not a fast forward')).encode(),
+                        b'x'*2_000_100):
+            class BrokenBody(io.BytesIO):
+                def read(self,*args):raise IncompleteRead(partial,1)
+            body=BrokenBody()
+            class Opener:
+                def open(self,req,timeout):
+                    raise HTTPError(req.full_url,422,'private',{},body)
+            with patch('hosted_state_canary.build_opener',return_value=Opener()):
+                with self.assertRaises(CanaryHTTPFailure) as caught:
+                    Wire('synthetic-fixture')('PATCH',PREFIX+'git/refs/'+REF,dict(sha='a'*40,force=False))
+            result=failure_evidence(caught.exception)
+            self.assertTrue(body.closed)
+            self.assertEqual(result['status'],422)
+            self.assertEqual(result['response']['body_read'],'INCOMPLETE')
+            self.assertLessEqual(result['response']['captured_bytes'],2_000_001)
             self.assertNotIsInstance(caught.exception,CanaryConflict)
 
     def test_existing_canary_is_never_reinitialized(self):
