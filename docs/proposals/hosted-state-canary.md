@@ -53,6 +53,18 @@ The original uncertain retained canary branch is preserved. Another live attempt
 requires owner authorization; code review/CI is not evidence of a repaired live
 race or a successful response-loss observation.
 
+Unexpected HTTP responses additionally retain bounded JSON shape, captured-body
+byte count/digest, read/encoding categories, and message length/SHA-256
+commitments at fixed message locations (top-level message/error and up to eight
+error items). Oversized or malformed content is explicitly classified. A tiny
+fixed vocabulary identifies diagnostic message variants; it does not authorize
+them as expected conflicts. No raw message, response body, header value, URL or
+credential is exported. A digest commits only to captured bytes when the response
+bound is exceeded, not an unobserved complete body. These fingerprints permit
+comparison with independently known public message candidates without publishing
+new provider text. Exact conflict acceptance, permissions and mutation behavior
+are unchanged; another live attempt remains owner-controlled.
+
 ## Acceptance and recovery
 
 Local tests use actual disposable bare Git repositories behind modeled HTTP.
