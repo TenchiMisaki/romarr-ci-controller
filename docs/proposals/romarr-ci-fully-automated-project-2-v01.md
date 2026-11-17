@@ -429,6 +429,62 @@ NOT_TESTED; independent consumer proof remains mandatory. No runner, workflow,
 uploader, credential loader or unattended source test is installed. The existing
 focused advisory producer is unchanged. Original Stage 6–8 acceptance is unchanged.
 
+### Isolated manual hosted-state canary — review PR #39
+
+[PR #39](https://github.com/TenchiMisaki/romarr-ci-controller/pull/39) prepares
+head `60e31687b3bfc122ec738bf6a978d442b6c6a9b5`, tree
+`e40d19d56b96ce0ba8c7a733181e52e6c425045b`, based on main `cd320e3f`.
+The workflow is an INERT proposal under `docs/proposals`, not installed Actions
+configuration. No live canary, ephemeral writer, source job or dispatch ran.
+
+The candidate routes the reviewed GitHubState backend to one new retained
+`controller-canary-<run_id>-<attempt>` ref only. It keeps canonical initial disabled
+state, verifies the owner/manual/main/hosted-Linux/exact-SHA context, rejects an
+existing canary, force/deletion/operational-state/source-dispatch targets, and
+never retries writes or deletes retained history. Eight distinct same-parent
+writers must have exactly one winner; only explicit HTTP 422 non-fast-forward
+rejection counts as an expected losing request. Auth, transport, rate-limit and
+other validation failures block instead. A successful subsequent write has its
+response deliberately dropped, then a fresh adapter verifies the sole-parent
+successor and disabled bytes. This is simulated response-loss/fresh-client
+coverage, not a naturally observed network failure or separate-process restart.
+
+Eight focused local tests PASS using actual disposable Git objects, including
+the duplicate-commit negative control. Compilation/whitespace PASS.
+[CI #44164373921](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44164373921)
+passed **482 unittest cases / 3 Windows-only skips / 296 pytest cases**,
+compilation, public artifact and read-only monitor smoke checks. CI merge
+`4dc85b712dc579075a618eaf2601bb51eaf7167b` has the exact candidate tree and
+parents `cd320e3f` / `60e31687`. Candidate/server/CI-merge tree and outgoing-history
+Gitleaks 8.30.1 checks passed with the official digest and positive control.
+[CodeRabbit review](https://github.com/TenchiMisaki/romarr-ci-controller/pull/39#pullrequestreview-5945698434)
+identified two valid failure-handling defects: a real TimeoutError could be
+misclassified as injected response loss, and a failed final operational GET
+could retain a passing report. Correction head
+`01a1541d59392719dfca5654be0cf048cd4f5fb5`, tree
+`a3910e2f408ef694cffbd78e72618222c8fefefc`, adds a dedicated injection
+exception, clears PASS before final readback and on failure, and adds both
+regressions. All ten focused local tests, compilation, whitespace and corrected
+candidate/server tree/history Gitleaks checks PASS.
+[Corrected-head CI #44165879502](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44165879502)
+passed **484 unittest cases / 3 Windows-only skips / 296 pytest cases** and all
+compilation/artifact/read-only monitor steps. Actual CI checkout
+`85d39234f649977caf895b5646acf9c30583bf35` has exact tree `a3910e2f` and
+parents `cd320e3f` / `01a1541d`; its tree/history scans PASS.
+[Incremental CodeRabbit review](https://github.com/TenchiMisaki/romarr-ci-controller/pull/39#issuecomment-6959545166)
+is running on exact correction head; PR #39 remains OPEN / UNMERGED. No passing
+check or old-head review is being substituted for current-head review completion.
+
+The separately controlled next decision is installation and one owner-triggered
+manual run of this concrete canary. Its ephemeral job token needs repository
+contents-write permission, broader than a provider-side per-ref grant; the
+application allowlist is not a substitute for that permission boundary.
+A live run creates and retains one new canary branch plus append-only commits;
+no production-state/tag, protection, source execution, unattended policy or manual
+fallback change is included. This additional privileged execution is not bundled
+into the previous disabled bootstrap or website prerelease approval. Operational
+acceptance and actual real-ref protection refusals remain NOT TESTED.
+
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
 The owner explicitly approved the exact disabled bootstrap and additive
