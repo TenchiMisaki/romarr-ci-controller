@@ -1,4 +1,4 @@
-# INERT PROPOSAL ONLY: not under .github/workflows; requires separate acceptance.
+# Owner-approved manual canary only; no operational acceptance or source dispatch.
 name: Manual controller state canary
 on:
   workflow_dispatch:

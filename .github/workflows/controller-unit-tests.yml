@@ -10,6 +10,7 @@ on:
       - '.github/workflows/romarr-pr-watch.yml'
       - '.github/workflows/romarr-pr-monitor.yml'
       - '.github/workflows/controller-unit-tests.yml'
+      - '.github/workflows/controller-state-canary.yml'
       - '.github/workflows/stage6-pr-manual-candidate.yml'
       - 'README.md'
       - 'VALIDATION.md'
