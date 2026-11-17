@@ -911,6 +911,91 @@ success does not establish provider-side per-ref credential confinement, actual
 ruleset refused-write behavior or general operational acceptance. Reuse completed
 code/CI/review/security evidence; do not repeat this accepted canary needlessly.
 
+### Read-only protection observation increment — PR #44 MERGED
+
+[PR #44](https://github.com/TenchiMisaki/romarr-ci-controller/pull/44) adds dormant
+`controller/protection_preflight.py`, offline regression tests and the scoped
+observation/recovery boundary document. Candidate head
+`8f30aee60f8871c4f55ca7bbda23ebe599ccb9a5`, tree
+`4e981347857f8beccb229b478dbe6b96ba31c18f`, is based on approved main `1327160a`.
+No workflow, credential, transport, administrative scope, settings or execution
+hook is installed. The supplied reader is constrained to six fixed GET targets.
+
+The library separately reports approved configuration, active branch applicability,
+and refused-write evidence. Exact fixed repository/owner/default branch, three
+approved rule IDs/targets/selectors, required restrictions and explicitly empty
+bypass lists are required. All configurations and branch observations are read
+twice; final repository identity and security-field digest stability are checked.
+Stronger additional rules are preserved. Unknown parameters on required restrictions,
+duplicate required rules, missing fields, denied reads, mismatched sources and
+drift block the observation. Arbitrary provider data/parameters/error text are
+not exported. No deletion/non-fast-forward mutation probes are performed.
+
+**Live observation, November 17, 2026, 14:40 PST:** a public-only collection failed
+to verify the baseline. A focused public ruleset GET independently showed that
+`bypass_actors` was omitted; omission is not evidence of an empty bypass list or
+weak protections. A separate complete collection evaluated exactly 12 API
+snapshots: connected GitHub repository/ruleset reads and direct public branch-rule
+GETs, because the connector does not expose the branch-rules endpoint. The candidate
+library evaluated these exact snapshots and reported configuration_observations=PASS.
+The observed timestamp is `2026-11-17T22:40:28.524339+00:00`. Initial/readback digests:
+
+| Ruleset | Stable security-field SHA-256 |
+| --- | --- |
+| Protect main `27344007` | `04115a59d3db6b0a5182cf3890b00c468dc6ce629b3c448c8385b7bbc8a1dcda` |
+| State `27485340` | `a88beb5518604db74da616d90318f735749661e91d3600a28ef690d5f24c10fe` |
+| Revision `27484547` | `565b826097825d1ed21ea94495a0bb259407dadfa4f97a5d3089fe146f6e2038` |
+
+Both required branch-rule sets and initial/final repository identity matched.
+These are field fingerprints, not complete ruleset export/recovery digests.
+`refused_write_enforcement`, `tag_applicability`, `operational_acceptance` remain
+NOT TESTED; activation_allowed and dispatch_allowed remain false. Classic branch
+protections and administrative rule-suite history retain their separate visibility
+limits. No authority is inferred from read-only observations or the prior canary.
+
+**Verification:** 25 focused local tests PASS; compilation/diff checks PASS.
+[Hosted CI #44192151111](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44192151111)
+passed **517 unittest cases / 3 Windows-only skips / 296 pytest cases**, compilation,
+artifact smoke and read-only monitor checks. Actual CI merge
+`1adf8e50a88983c825ebee45856ae3bf56fee6f7` independently matches candidate tree
+`4e981347` and ordered parents `1327160a` / `8f30aee6`. Candidate/server/actual-CI-merge
+Gitleaks tree/outgoing-history checks PASS, with detected positive controls.
+Initial CodeRabbit review identified a compatibility issue with GitHub's documented
+update_allows_fetch_and_merge parameter on required update rules. Corrected head
+`ff8de5b52eba8f6e3f6b6ea82f89d81243621e8e`, tree
+`7b919262512b326a5f0b4304a5ed745b66ce0ec6`, accepts only the explicit false boolean
+form as equivalent to the strict approved baseline. True, numeric zero, malformed
+or extra/missing keys and parameters on other required restrictions remain rejected.
+No protection settings or approval scope changed. **26 focused tests PASS**;
+corrected compilation/diff and candidate/server tree/history scans PASS. Re-evaluation
+of the exact retained 14:40 collection through the corrected library PASS; no
+second live network collection is implied. Original review thread
+`PRRT_kwDOVufN-c64sRUG` is resolved with independently verified regression evidence.
+[Corrected CI #44193624662](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44193624662)
+passed **518 unittest cases / 3 Windows-only skips / 296 pytest cases** and all
+compilation/artifact/read-only monitor checks. Actual CI merge
+`599a1e789832ae38bb114848b8c46b8459cddd10` matches corrected tree `7b919262` and
+ordered parents `1327160a` / `ff8de5b5`; its exact tree/history security scans PASS.
+[Final CodeRabbit assessment](https://github.com/TenchiMisaki/romarr-ci-controller/pull/44#issuecomment-6963079302)
+completed successfully on exact covered head `ff8de5b52eba8f6e3f6b6ea82f89d81243621e8e`,
+with no remaining actionable merge-blocking risk or retained architecture concerns.
+The sole finding thread is resolved. Numeric docstring coverage was not reported;
+no percentage is inferred. PR #44 merged under standing safe-development authority
+at `744804afa5279ca377c9e8c7259ba9f24f892475`; independent REST readback confirms
+exact tested/scanned tree `7b919262512b326a5f0b4304a5ed745b66ce0ec6` and ordered
+parents `1327160a` / `ff8de5b5`. Main points at that merge. Operational state remains
+unchanged and disabled at `d2930189ec0aa9c59b1a2fdf108fe75892f9ad03`.
+No workflow hook or protection-setting change accompanied this merge.
+
+**Next boundary:** this read-only library increment is complete. Actual refused-write evidence
+still needs administrative rule-suite history or separately approved safe testing;
+never delete/force-update real protected refs to manufacture it. GitHub documents
+Settings → Rules → Insights as the owner-visible read-only route to passed/failed/
+bypassed evaluations. A failed Evaluate-mode record or a bypass is not an active
+unbypassed refusal. Do not change protections to gain evidence. Continue unrelated
+owner-control/source-receipt work under its existing boundaries; preserve disabled
+operation, the successful manual canary and independent fallback.
+
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
 The owner explicitly approved the exact disabled bootstrap and additive
