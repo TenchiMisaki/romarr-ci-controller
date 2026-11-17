@@ -24,6 +24,59 @@ the dated earlier checkpoints remain preserved.
   receipts, unattended pytest, automatic remediation, deployment and fallback
   retirement are not enabled or accepted.
 
+### Completed focused ledger increment
+
+[Controller PR #31](https://github.com/TenchiMisaki/romarr-ci-controller/pull/31)
+merged at `3f4ee847585a5252b34cb26ddddb62cdd8929ec7`. The merged tree
+`f83e550593f977826cae687cb0e743b2c779031d` independently matched the
+scanned implementation tree and hosted CI merge tree.
+
+- New offline tests: **13/13 PASS** on Windows/Python 3.15.2.
+  Initial test-only Windows cleanup errors were corrected by explicitly closing
+  assertion connections; no safety check was relaxed.
+- [Linux CI #44028502729](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44028502729):
+  **323 unittest cases PASS**, including the 13 new ledger tests; **296 existing
+  Stage 6 pytest cases PASS**, zero failures/skips, plus compilation, artifact
+  smoke and live read-only monitor checks. Two expected warnings came from the
+  deliberate duplicate-ZIP rejection fixtures.
+- [Completed CodeRabbit assessment](https://github.com/TenchiMisaki/romarr-ci-controller/pull/31#issuecomment-6940214429):
+  exact source/covered head `6a81ab54ffdaca3a2e8a2029fd556c412f20262f`,
+  no actionable comments, no inline comments and no unresolved review threads.
+  The bot published its assessment in the PR conversation; no separate submitted
+  review node was present. Its successful execution and substantive assessment
+  were independently checked.
+- Gitleaks **8.30.1**: final tree, proposed outgoing history and exact
+  server-created outgoing commit history all passed with zero findings.
+  Scanner binary matched the previously verified digest; accepted positive-control
+  evidence was reused. All three public file blobs matched the scanned source.
+- Source and workflow isolation: no network adapter, credentials, workflow edits,
+  automatic retry/reset, receipt acceptance or source execution was introduced.
+  The prototype is not imported by any workflow.
+
+The implementation adds `controller/stage6_dispatch_ledger.py`,
+`tests/test_stage6_dispatch_ledger.py` and
+[the scoped design and acceptance limits](https://github.com/TenchiMisaki/romarr-ci-controller/blob/main/docs/proposals/stage6-dispatch-ledger-design.md).
+Its real eight-worker SQLite race verifies one local reservation; interruption
+tests preserve uncertainty across restart; generation checks block old tickets
+after disarm/rearm. This is **OFFLINE PROTOTYPE VERIFIED**, not installed hosted
+claim storage, authenticated owner control, run-bound recovery or unattended
+testing acceptance.
+
+### Next implementation boundary
+
+Use the existing controller-owned immutable claim/run mechanisms as a design
+input for a separately reviewed hosted durable backend; do not treat a runner-local
+SQLite file as cross-run storage. Preserve legacy/v2 claims and accepted receipts.
+Before connecting a dispatcher, implement and test unique run-ID correlation,
+independent authenticated source/run observations, bounded reconciliation of
+uncertain writes, storage/credential recovery and real failure alerts. Do not
+silently add a claim reset, retry, schedule, privileged monitor permission or test
+receipt acceptance.
+
+A separately accepted live unattended trial, operational handoff and fallback
+retirement remain owner-controlled. None is requested or enabled merely by this
+prototype merge. The existing manual source-test fallback is preserved.
+
 ### Remaining coverage and implementation order
 
 | Area | Existing evidence | Remaining acceptance |
@@ -35,11 +88,7 @@ the dated earlier checkpoints remain preserved.
 | Partial write / uncertain POST | No accepted live automatic recovery | Persist uncertainty before POST, unique run-ID reconciliation, no blind retry or claim deletion |
 | Operations | Successful read-only monitor runs are dated observations | Native/fallback collision, sustained cadence, real alert delivery, credential renewal and recovery |
 
-**Next isolated change:** develop an offline, disabled-by-default local claim
-ledger prototype and targeted negative/race/restart tests. It must have no network
-adapter, credentials, workflow integration, automatic reset or receipt acceptance.
-A local SQLite race test is not distributed-scheduler acceptance. New source
-publication still needs final-tree/history scans, exact-head CI and CodeRabbit.
+**Local ledger increment completed:** the offline prototype and targeted negative/race/restart tests are merged as recorded above. Distributed-scheduler, run-bound reconciliation and live recovery acceptance remain open; the prototype does not provide them.
 
 **Recovery design:** preserve ambiguous claims and evidence; do not retry uncertain
 dispatch writes or erase a reservation to make a worker proceed. A later adapter
