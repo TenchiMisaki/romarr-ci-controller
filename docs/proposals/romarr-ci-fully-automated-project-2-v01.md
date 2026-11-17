@@ -1,5 +1,110 @@
 # ROMarr CI Controller — Fully Automated Project 2
 
+## Current integrated development — November 16, 2026 (Pacific)
+
+This section supersedes older current-state introductions and next-step wording;
+all dated milestones and the complete CP-01–CP-10 requirements below are retained.
+The scope expansion at commit `712c5734d20651a813e9e7954d8777c66cc7e4d7` was
+independently read before this update. The original Stage 6–8 operational handoff
+is unchanged and remains NOT ACCEPTED / NOT ENABLED.
+
+### Original Stage 6–8 implementation
+
+[PR #32](https://github.com/TenchiMisaki/romarr-ci-controller/pull/32), branch
+`review/stage6-hosted-claims`, is OPEN / UNMERGED at
+`7b73d5a4b2c3c6a020a408f80b12031cc9c585ed`, based on controller main
+`3f4ee847585a5252b34cb26ddddb62cdd8929ec7`.
+
+- Stage 6: dormant Git-backed cross-run state, sole-parent non-force updates with
+  independent readback, authenticated owner-control adapter/default-disabled
+  acceptance contract, exact source/legacy-claim gates, durable uncertainty before
+  POST, direct run ID and source/nonce-bound run correlation. No state branch,
+  immutable revision tag, credential service or unattended caller is provisioned.
+- Stage 7: existing exact-head CodeRabbit parser integrated with persistent bounded
+  refresh, source rechecks and separate findings/thread states. No automatic code
+  remediation or upstream action.
+- Stage 8: persistent tick deduplication, integrated cycle, failed/pending/advisory
+  states, atomic failure-alert intent, bounded confirmed-nondelivery retry and
+  preserved uncertain delivery. Real notification delivery is NOT TESTED.
+- Local focused regressions: **64 PASS**, plus compilation/whitespace checks.
+  The race negative control reproduced two winners with identical commit IDs,
+  while the corrected unique-attempt commits permit exactly one winner.
+- [Initial CI #44033617080](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44033617080):
+  **367 unittest / 296 Stage 6 pytest PASS** at `ebcc30d5`.
+- [Corrected-head CI #44035731802](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44035731802):
+  **372 unittest / 296 Stage 6 pytest PASS**, compilation, public-artifact smoke and
+  live read-only monitor checks passed. The two warnings are the pre-existing
+  deliberate duplicate-ZIP fixtures.
+- [Initial CodeRabbit review](https://github.com/TenchiMisaki/romarr-ci-controller/pull/32#pullrequestreview-5934245311)
+  found three valid issues: review refresh missing from the cycle, terminal-run
+  alert intent/retry loss, and identical same-second state commits permitting
+  duplicate dispatch fences. All three have scoped corrections and regressions at
+  `6a4fc5b7`. A further valid stale-review starvation finding was corrected at
+  `7b73d5a4` with two additional regressions; invalid collection remains blocked.
+  **Final-head CI/review and thread closure remain PENDING**.
+- Gitleaks 8.30.1: initial/corrected complete trees and exact outgoing server
+  histories passed with zero findings. Scanner binary/accepted positive control
+  reused after identity verification. Corrected server tree
+  `32e2bd09881d0b378a90c6519d088c93be3fd9a2` matched scanned bytes.
+
+Detailed design/recovery:
+[controller cycle acceptance plan](https://github.com/TenchiMisaki/romarr-ci-controller/blob/review/stage6-hosted-claims/docs/proposals/controller-cycle-acceptance.md).
+These are implementation and controller-test results, not live hosted durable
+storage, dispatch/recovery, owner-control, complete receipt or scheduler acceptance.
+
+### Cross-platform increment
+
+[PR #33](https://github.com/TenchiMisaki/romarr-ci-controller/pull/33), branch
+`review/cross-platform-advisory`, is OPEN / UNMERGED at
+`6b0ccb2502f6a90ffe8617000e52501542ef9c9c`. Its six-file increment is separately
+based on the same main, preserving independent review of the original workstream.
+
+| Requirements | Implemented advisory scope | Acceptance still open |
+| --- | --- | --- |
+| CP-01, CP-09 | Prepared digest-pinned Docker health/dependency/permission probe; standard/browser profiles; isolated execution/owned cleanup | Real image runs, negative/recovery behavior, complete runtime/plugin/architecture policy |
+| CP-02, CP-06 | Prepared Windows Python 3.11/3.13 source/toolchain checks and focused suite/JUnit adapter | Actual ROMarr runs on both minors, loopback/authentication/persistence, dependencies |
+| CP-03 | File/OCI subject digest and pinned GitHub CLI signed-attestation adapter with exact source/signer constraints | Live valid/invalid attestations and package-to-contained-EXE provenance; labels are insufficient |
+| CP-04, CP-08 | Strict typed three-file receipts, authenticated run/job/step/artifact contract, count/skip/privacy/ZIP guards | Ordered live producer/verifier integration and per-platform upload acceptance |
+| CP-05 | Actual prepared EXE digest/launch/proof adapter | Real EXE execution and independent provenance/timeout cleanup acceptance |
+| CP-07, CP-10 | Same-revision versioned required/optional readiness and separate failure dimensions | Accepted live evidence/policy; missing platforms remain NOT TESTED; no release authority |
+
+**Local CP contracts: 26 PASS**, compilation/whitespace PASS. New GitHub Actions
+matrix tests controller contracts only on Linux 3.13 and Windows 3.11/3.13; it is
+not ROMarr platform acceptance. [Platform matrix #44036374376](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44036374376)
+and [controller CI #44036374198](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44036374198)
+completed successfully at `6b0ccb25`. **CodeRabbit remains PENDING.**
+Gitleaks 8.30.1 final-tree/outgoing-history/exact-server-history scans passed with
+zero findings. Server tree `55a54d4c78123a7d913886bd3e16afd33064f105` matched the
+scanned payload. Privacy/provenance review completed; no substantial maintainer
+source copied. Official CI/runtime interfaces were read for interoperability at
+`BlizzHacker/romarr@3d2bc6cc2ede0cd555e49e44b3fc84bf7e9f2f1a`.
+
+Per-capability design/limits:
+[cross-platform advisory acceptance](https://github.com/TenchiMisaki/romarr-ci-controller/blob/review/cross-platform-advisory/docs/proposals/cross-platform-advisory.md).
+No release builds/publishing, new credentials, source/platform scheduler,
+automatic remediation, production changes or fallback retirement were introduced.
+
+### Remaining operational gates and execution limits
+
+- Complete independent source/test/JUnit/skip/job/artifact receipt acceptance;
+  the preserved 70-case manual workflow remains advisory.
+- Actual durable hosted state races, nonce-correlated dispatch and uncertain-write
+  recovery, owner-only arm/disarm entrypoint/acceptance record, immutable-ref and
+  storage protections, credential expiry/renewal and recovery.
+- Sustained native/fallback cadence/collision behavior, missed/failed-run alerts,
+  real provider delivery/receipt reconciliation, interruption/retention recovery.
+- Separately owner-authorized bounded unattended trial and primary-method handoff;
+  preserve the independent manual fallback until separate retirement approval.
+- Live platform probes require a supported disposable executor and prepared
+  immutable artifacts. The current local environment has no Docker and only
+  Python 3.15; direct GitHub transport fails DNS. Connected GitHub reads/writes
+  remain usable for reviewed publication and hosted controller tests. No live
+  Docker, ROMarr Windows 3.11/3.13, EXE or signed-network-attestation acceptance
+  is inferred from offline fixtures.
+- Next: complete exact-head reviews and legitimate corrections, reconcile hosted
+  matrix results, merge only after applicable gates, then risk-appropriate combined
+  source validation. Continue independent development without enabling operation.
+
 ## Current Stage 6 continuation — November 16, 2026 (Pacific)
 
 This section supersedes the older open-review and pending-canary status below;
@@ -239,7 +344,7 @@ The controller handles source-level CI and review evidence. Docker image/platfor
 
 Before continuing, review this backlog, [controller README](https://github.com/TenchiMisaki/romarr-ci-controller/blob/main/README.md), [VALIDATION.md](https://github.com/TenchiMisaki/romarr-ci-controller/blob/main/VALIDATION.md), applicable repository `AGENTS.md`, and current source, GitHub Actions jobs and CodeRabbit reviews. Reconcile the controller's current `main` revision, relevant fork branches, target PR head/base SHAs and claim/run identities. Previous green tests belong to their exact revisions, not a later moving head.
 
-**Resume from the Current Stage 6 review section above: PR #30 exact-head review and then separately controlled manual exact-PR hosted acceptance.** Do not repeat accepted source tests, confuse read-only workflow successes with hosted source acceptance, merge the review PR, or silently enable privileged automation. Stop only at the real security, owner-controlled GitHub, upstream or production boundaries.
+**Resume from the Current integrated development section above: PR #32 and PR #33 exact-head review/CI, then independently gated hosted and platform acceptance.** Do not repeat accepted source tests, confuse read-only workflow successes with hosted source acceptance, merge the review PR, or silently enable privileged automation. Stop only at the real security, owner-controlled GitHub, upstream or production boundaries.
 
 ## Approved scope expansion — cross-platform evidence verification (November 16, 2026)
 
@@ -273,3 +378,4 @@ Before continuing, review this backlog, [controller README](https://github.com/T
 The controller's `controller/public_evidence.py` already recognizes official ROMarr's three-member `summary.json`, `cases.json`, `manifest.json` evidence ZIP schema. This is **artifact self-consistency validation only**; source freshness, run identity, workflow/job outcomes, acceptance of platform-specific claims and operational reliability remain separate gates. Extend schemas conservatively and version them rather than interpreting existing source-only artifacts as Docker/Windows/native-executable acceptance.
 
 **Status on scope entry:** CP-01–CP-10 = APPROVED FOR PLANNING / NOT IMPLEMENTED OR ACCEPTED BY THIS BACKLOG UPDATE. Stage 6–8 implementation and operational acceptance remain in progress. This section records owner-requested scope, not a test or publication claim.
+
