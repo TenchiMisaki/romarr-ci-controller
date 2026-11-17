@@ -429,7 +429,7 @@ NOT_TESTED; independent consumer proof remains mandatory. No runner, workflow,
 uploader, credential loader or unattended source test is installed. The existing
 focused advisory producer is unchanged. Original Stage 6–8 acceptance is unchanged.
 
-### Isolated manual hosted-state canary — review PR #39
+### Isolated manual hosted-state canary — PR #39 MERGED
 
 [PR #39](https://github.com/TenchiMisaki/romarr-ci-controller/pull/39) prepares
 head `60e31687b3bfc122ec738bf6a978d442b6c6a9b5`, tree
@@ -472,8 +472,14 @@ compilation/artifact/read-only monitor steps. Actual CI checkout
 `85d39234f649977caf895b5646acf9c30583bf35` has exact tree `a3910e2f` and
 parents `cd320e3f` / `01a1541d`; its tree/history scans PASS.
 [Incremental CodeRabbit review](https://github.com/TenchiMisaki/romarr-ci-controller/pull/39#issuecomment-6959545166)
-is running on exact correction head; PR #39 remains OPEN / UNMERGED. No passing
-check or old-head review is being substituted for current-head review completion.
+completed on exact head `01a1541d`, with no new actionable comments, no
+outstanding merge-blocking risk and no retained architecture concerns.
+[Final assessment](https://github.com/TenchiMisaki/romarr-ci-controller/pull/39#issuecomment-6959325650)
+covers that exact SHA. Both original review threads are resolved; the second was
+closed with the correction/test evidence after final review completion.
+PR #39 merged at `68969a12e6968b58cb38e9490becda2bf359a16e`; independent
+Git and REST readback verifies exact tested/scanned tree `a3910e2f` and parents
+`cd320e3f` / `01a1541d`. The workflow remains INERT under `docs/proposals`.
 
 The separately controlled next decision is installation and one owner-triggered
 manual run of this concrete canary. Its ephemeral job token needs repository
