@@ -2,6 +2,8 @@
 import copy
 import io
 import json
+import os
+from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -9,7 +11,7 @@ from urllib.error import HTTPError
 
 from controller_cycle import initial_state
 from durable_state import PREFIX, STATE_REF, StateBlocked, encode
-from hosted_state_canary import (APPROVAL, CanaryAPI, CanaryConflict, Wire, context, exercise)
+from hosted_state_canary import (APPROVAL, CanaryAPI, CanaryConflict, Wire, context, exercise, main)
 from test_git_state_integration import LocalGitAPI
 
 REF='heads/controller-canary-123-1'
@@ -71,6 +73,41 @@ class CanaryTests(unittest.TestCase):
                 self.assertEqual(path,PREFIX+'git/refs/'+REF)
                 self.assertIs(body['force'],False)
             self.assertNotIn('/actions/',path)
+
+    def test_real_timeout_after_successful_patch_is_not_simulated_loss(self):
+        self.api.seed(self.controller)
+        original=self.wire
+        def timeout_after_success(method,path,body=None):
+            row=original(method,path,body)
+            if method=='PATCH' and self.api.drop_response:
+                raise TimeoutError('private transport failure')
+            return row
+        self.api.wire=timeout_after_success
+        with self.assertRaises(TimeoutError):exercise(self.api)
+        self.assertTrue(self.api.drop_response)
+
+    def test_final_operational_read_failure_cannot_report_pass(self):
+        class API:
+            def __init__(self,*args):self.reads=0
+            def _call(self,method,path):
+                if not path:return dict(id=1458032121,owner=dict(id=71314201),
+                    private=False,archived=False,disabled=False)
+                self.reads+=1
+                if self.reads==2:raise TimeoutError('private transport failure')
+                return dict(ref='refs/'+STATE_REF)
+            def seed(self,sha):pass
+        with patch.dict(os.environ,dict(RUNNER_TEMP=self.temp.name,GITHUB_SHA='a'*40)), \
+                patch('hosted_state_canary.context',return_value=REF), \
+                patch('hosted_state_canary.Wire'), \
+                patch('hosted_state_canary.CanaryAPI',API), \
+                patch('hosted_state_canary.exercise',return_value=dict(
+                    schema=1,state='CANARY_OBSERVATIONS_PASS',ref=REF)), \
+                patch('sys.stdout',new_callable=io.StringIO) as output:
+            self.assertEqual(main(),1)
+        report=json.loads((Path(self.temp.name)/'controller-canary-summary.json').read_text())
+        self.assertEqual(report['state'],'BLOCKED_OR_UNCERTAIN')
+        self.assertEqual(report['phase'],'OPERATIONAL_READBACK')
+        self.assertNotIn('private transport failure',output.getvalue())
 
     def test_existing_canary_is_never_reinitialized(self):
         self.api.seed(self.controller);before=len(self.wire.calls)

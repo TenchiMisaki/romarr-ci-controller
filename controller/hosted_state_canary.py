@@ -32,6 +32,10 @@ class CanaryConflict(StateBlocked):
     """Server explicitly rejected an already-competing non-fast-forward PATCH."""
 
 
+class SimulatedResponseLoss(Exception):
+    """Only the deliberate post-success injection, never a transport timeout."""
+
+
 def context(env):
     """Require owner-initiated, exact-revision GitHub-hosted manual execution."""
     if (env.get('GITHUB_REPOSITORY') != 'TenchiMisaki/romarr-ci-controller'
@@ -117,7 +121,7 @@ class CanaryAPI:
             row = self._call('PATCH', 'git/refs/' + self.ref, body)
             if self.drop_response:
                 self.drop_response = False
-                raise TimeoutError('CANARY_SIMULATED_LOST_RESPONSE')
+                raise SimulatedResponseLoss('CANARY_SIMULATED_LOST_RESPONSE')
             return row
         raise StateBlocked('CANARY_METHOD_OR_TARGET_REJECTED')
 
@@ -174,7 +178,7 @@ def exercise(api):
     api.drop_response = True
     try:
         GitHubState(api).save(winner, initial_state())
-    except TimeoutError:
+    except SimulatedResponseLoss:
         pass
     else:
         raise StateBlocked('CANARY_RESPONSE_LOSS_NOT_INJECTED')
@@ -246,11 +250,15 @@ def main():
         report['phase']='RACE_AND_RECOVERY'
         print('VERIFY: eight-writer race and simulated lost-response readback',flush=True)
         report=exercise(api)
+        report['state']='BLOCKED_OR_UNCERTAIN'
+        report['phase']='OPERATIONAL_READBACK'
         if api._call('GET','git/ref/'+STATE_REF)!=operational:
             report['state']='OPERATIONAL_STATE_CHANGED_DURING_OBSERVATION'
+        else:
+            report['state']='CANARY_OBSERVATIONS_PASS'
     except Exception:
         # Preserve uncertain refs/history; never retry, repair or emit raw errors.
-        pass
+        report['state']='BLOCKED_OR_UNCERTAIN'
     try:
         output=Path(os.environ['RUNNER_TEMP'])/'controller-canary-summary.json'
         with output.open('x') as stream:stream.write(json.dumps(report,sort_keys=True)+'\n')
