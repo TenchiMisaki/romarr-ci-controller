@@ -699,7 +699,19 @@ Gitleaks tree/history checks PASS.
 passed **495 unittest cases / 3 Windows-only skips / 296 pytest cases**, compilation,
 artifact and read-only monitor steps. CI merge `d2309cb6` has exact tree `8c53bef3`
 and parents `d97d9ac9` / `7c5752eb`; its tree/history scans PASS.
-Exact-head CodeRabbit review PENDING. No live provider behavior is claimed fixed.
+[Initial CodeRabbit review](https://github.com/TenchiMisaki/romarr-ci-controller/pull/42#issuecomment-6961345535)
+found two valid diagnostic gaps: JSON recursion-limit exceptions and incomplete
+HTTP body reads could discard status/captured-byte evidence. Correction head
+`c90d1bbfad8f85525e52da2436738583f8b99a9b`, tree
+`a0b40ddce7a53f5844dbd3f79497e67a9b3f1254`, handles both, closes error responses
+in finally, bounds partial bytes and forbids incomplete bodies from conflict
+recognition. All 23 focused tests, compilation, whitespace and corrected
+candidate/server tree/history scans PASS.
+[Corrected CI #44179982037](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44179982037)
+passed **497 unittest cases / 3 Windows-only skips / 296 pytest cases** and all
+compilation/artifact/read-only monitor steps. CI merge `50a06007` has exact tree
+`a0b40ddc` and parents `d97d9ac9` / `c90d1bbf`; its tree/history scans PASS.
+Incremental CodeRabbit review is PENDING on that correction head. No live provider behavior is claimed fixed.
 Any further mutating diagnostic run requires owner authorization after review.
 
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
