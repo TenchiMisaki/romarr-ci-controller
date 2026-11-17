@@ -549,8 +549,39 @@ substitute an unreviewed SHA; the executor fails closed for a changed run SHA.
 After the owner runs it, inspect exact run/actor/head/jobs/logs/artifact,
 retained canary state/ancestry and unchanged operational ref/tag/protections.
 No repeat mutating run is implied by this handoff. Do not request or
-handle credentials in chat. No live canary has run; hosted observations,
+handle credentials in chat. At the installation handoff no live canary had run; hosted observations,
 operational acceptance and actual real-ref protection refusals remain NOT TESTED.
+
+### First installed canary attempt — HOST GATE BLOCKED / NO MUTATIONS
+
+[Run #44172592345](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44172592345),
+attempt 1, was an owner-triggered workflow_dispatch on main at installed SHA
+`f09e7cf6b1f27ee10de7cc2dc120f1b2bd8638d2`, actor and triggering actor
+TenchiMisaki / 71314201. The canary step failed at HOST_GATE before the
+credential-bearing API path or any mutation. Logs show EXPECTED_CONTROLLER_SHA
+received `f09e7cf6b1f27ee10de7` and CANARY_APPROVAL received
+`cc2dc120f1b2bd8638d2`: the intended SHA was split across the two inputs.
+This is an input rejection, not evidence of a repository permission failure or
+storage/concurrency defect. The runtime gate was not weakened or bypassed.
+
+The summary upload succeeded. Artifact `14367434051`, name
+`controller-state-canary-44172592345-1`, is bound to the exact run/head/repository.
+Independent download verified 274 bytes, SHA-256
+`2fadea9e8147944d398d113fa53c10a963fea76626406a5221ad51662a431142`,
+single `controller-canary-summary.json`, ZIP CRC and exact parsed result:
+BLOCKED_OR_UNCERTAIN / HOST_GATE / operational_acceptance NOT TESTED.
+Read-only post-run checks found the expected canary ref absent (404), operational
+state still `d2930189`, revision tag still `8a981726`, and main still `f09e7cf6`.
+No retained canary history was created and no source dispatch occurred.
+
+Next owner action: start a NEW Run workflow invocation (not Re-run jobs with the
+same rejected inputs), branch main, full controller SHA
+`f09e7cf6b1f27ee10de7cc2dc120f1b2bd8638d2`, approval
+`CREATE_RETAINED_CANARY_ONLY`. The existing scope approval persists for one
+actual bounded canary exercise; this blocked pre-mutation invocation does not
+justify changing permissions or repeat mutating attempts. Hosted storage race,
+simulated response loss, operational acceptance and real-ref refusal behavior
+remain NOT TESTED. Preserve this failed run and its summary as negative evidence.
 
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
