@@ -166,6 +166,34 @@ for current prerequisite reporting. No state/tag creation, owner arming, source
 dispatch, credential deployment or protection change occurred. Live operational
 acceptance remains NOT TESTED / NOT ACCEPTED; the manual fallback is preserved.
 
+### Owner-bound advisory trial — IN PROGRESS
+
+[PR #36](https://github.com/TenchiMisaki/romarr-ci-controller/pull/36) is OPEN /
+UNMERGED at `42419f2315020c034c7003b9b12ee189ebdc177b`, based on `7a90efff`.
+It binds one advisory trial to canonical approval bytes with an independently
+configured SHA-256 pin, exact owner/repositories/workflow/controller/PR/head/base,
+and issued/expiry times. Approval is immutable and rechecked before arm,
+reservation, durable fence and POST. Expiry preserves unknown claims; authenticated
+disarm and known-run reconciliation remain available. It neither installs an
+owner entrypoint nor creates actual acceptance evidence or a live approval.
+
+Local Linux/Python 3.12.14: **84 focused tests PASS**, including 16 new cases and
+real Git expiry/restart/disarm; compilation/whitespace PASS. Final-tree, outgoing
+and exact-server-history Gitleaks 8.30.1 scans passed with zero findings, verified
+scanner identity and positive control. Tree `84a4ead24ca6ef285f3d6c48497a04cd4bbb9ea0`
+matches the scanned bytes.
+[CI #44133893688](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44133893688)
+passed **443 unittest cases / 3 Windows-only skips** and **296 pytest cases**,
+compilation/public-artifact/read-only smoke checks. Exact-head CodeRabbit remains
+IN PROGRESS; merge remains gated on its substantive assessment.
+
+The expected approval digest, controller, clock, credentials and source isolation
+must come from an independently accepted trusted deployment. Hashing arbitrary
+PR/caller JSON cannot authenticate approval. Existing coordinator default-disabled
+behavior and low-level trusted-host capability are preserved; only the new
+subclass adds this trial binding. No real owner approval, state/tag, credentials,
+workflow caller, source execution or unattended activation was provisioned.
+
 ### Cross-platform increment
 
 [PR #33](https://github.com/TenchiMisaki/romarr-ci-controller/pull/33), branch
