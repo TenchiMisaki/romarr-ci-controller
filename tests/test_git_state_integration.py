@@ -215,10 +215,14 @@ class GitStateIntegrationTests(unittest.TestCase):
         observed = subprocess.run([sys.executable, '-c', program, str(self.api.root)],
             env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=15)
         self.assertEqual(json.loads(observed.stdout), list(self.store.load()))
-        restarted = Controller(GitHubState(LocalGitReader(self.api)), ports,
+        fresh_api = LocalGitAPI(self.api.root, initialize=False)
+        before = self.store.load()
+        restarted = Controller(GitHubState(fresh_api), ports,
             controller_sha='c'*40, operational_acceptance=True)
-        with self.assertRaises(StateBlocked):
+        with self.assertRaisesRegex(StateBlocked, '^DISPATCH_FENCE_REJECTED$'):
             restarted.dispatch(key, nonce)
+        self.assertEqual(self.store.load(), before)
+        self.assertEqual((fresh_api.created, fresh_api.patches), ([], 0))
         self.assertEqual(ports.posts, 0)
 
     def test_rejected_fence_preserves_reservation_and_never_dispatches(self):
