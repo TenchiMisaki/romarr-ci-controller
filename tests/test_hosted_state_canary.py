@@ -11,7 +11,8 @@ from urllib.error import HTTPError
 
 from controller_cycle import initial_state
 from durable_state import PREFIX, STATE_REF, StateBlocked, encode
-from hosted_state_canary import (APPROVAL, CanaryAPI, CanaryConflict, Wire, context, exercise, main)
+from hosted_state_canary import (APPROVAL, CanaryAPI, CanaryConflict, Wire, context, exercise, main,
+    CanaryHTTPFailure, failure_evidence)
 from test_git_state_integration import LocalGitAPI
 
 REF='heads/controller-canary-123-1'
@@ -108,6 +109,61 @@ class CanaryTests(unittest.TestCase):
         self.assertEqual(report['state'],'BLOCKED_OR_UNCERTAIN')
         self.assertEqual(report['phase'],'OPERATIONAL_READBACK')
         self.assertNotIn('private transport failure',output.getvalue())
+
+    def test_mixed_race_failure_keeps_bounded_evidence_and_blocks_recovery(self):
+        self.api.seed(self.controller)
+        original=self.wire
+        rejected=False
+        def reject_one_patch(method,path,body=None):
+            nonlocal rejected
+            if method=='PATCH':
+                with self.api.lock:
+                    if not rejected:
+                        rejected=True
+                        raise CanaryHTTPFailure(409,'PATCH','REFERENCE_UPDATE_FAILED')
+            return original(method,path,body)
+        self.api.wire=reject_one_patch
+        progress={}
+        with self.assertRaisesRegex(StateBlocked,'CANARY_RACE_WRITER_FAILED'):
+            exercise(self.api,progress)
+        self.assertEqual(progress,dict(phase='RACE_VALIDATE',writers=8,successes=1,
+            conflicts=6,created_commits=8,writer_failures=[dict(
+                category='HTTP_REJECTED',status=409,method='PATCH',reason='REFERENCE_UPDATE_FAILED')]))
+        self.assertFalse(self.api.drop_response)
+
+    def test_failure_evidence_never_exports_unrecognized_exception_text(self):
+        for error,expected in [(StateBlocked('private-secret'),dict(
+                category='STATE_BLOCKED',code='UNCLASSIFIED_STATE_BLOCK')),
+                (TimeoutError('private-secret'),dict(category='TRANSPORT_TIMEOUT')),
+                (OSError('private-secret'),dict(category='TRANSPORT_OR_IO_ERROR')),
+                (ValueError('private-secret'),dict(category='UNEXPECTED_EXCEPTION'))]:
+            with self.subTest(kind=type(error).__name__):
+                self.assertEqual(failure_evidence(error),expected)
+                self.assertNotIn('private-secret',json.dumps(failure_evidence(error)))
+
+    def test_success_progress_distinguishes_race_and_loss_readbacks(self):
+        self.api.seed(self.controller)
+        progress={}
+        result=exercise(self.api,progress)
+        self.assertEqual(result['state'],'CANARY_OBSERVATIONS_PASS')
+        self.assertEqual(progress['phase'],'RESPONSE_LOSS_READBACK')
+        self.assertEqual(progress['successes'],1)
+        self.assertEqual(progress['conflicts'],7)
+        self.assertEqual(progress['writer_failures'],[])
+
+    def test_unexpected_http_responses_are_diagnostic_failures_not_conflicts(self):
+        for status,message,reason in [(409,'Reference update failed','REFERENCE_UPDATE_FAILED'),
+                (422,'private server payload','OTHER_RESPONSE'),(403,'private token','OTHER_RESPONSE')]:
+            class Opener:
+                def open(self,req,timeout):
+                    raise HTTPError(req.full_url,status,'private',{},io.BytesIO(
+                        json.dumps(dict(message=message)).encode()))
+            with patch('hosted_state_canary.build_opener',return_value=Opener()):
+                with self.assertRaises(CanaryHTTPFailure) as caught:
+                    Wire('synthetic-fixture')('PATCH',PREFIX+'git/refs/'+REF,dict(sha='a'*40,force=False))
+            self.assertEqual(failure_evidence(caught.exception),dict(
+                category='HTTP_REJECTED',status=status,method='PATCH',reason=reason))
+            self.assertNotIsInstance(caught.exception,CanaryConflict)
 
     def test_existing_canary_is_never_reinitialized(self):
         self.api.seed(self.controller);before=len(self.wire.calls)
