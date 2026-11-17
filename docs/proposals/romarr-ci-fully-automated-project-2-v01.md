@@ -89,12 +89,15 @@ storage, dispatch/recovery, owner-control, complete receipt or scheduler accepta
 ### Cross-platform increment
 
 [PR #33](https://github.com/TenchiMisaki/romarr-ci-controller/pull/33), branch
-`review/cross-platform-advisory`, is OPEN / UNMERGED at
-`58e30591114d89bfdef79aa0ce02ecfe5d15f8bc` after the five original review findings
-were corrected. The original six-file increment was based on `3f4ee847`; the
+`review/cross-platform-advisory`, is **MERGED** at
+`485bb794d08fbded30ca80f5c735d3e3d9bcf2b7`, final reviewed head
+`58e30591114d89bfdef79aa0ce02ecfe5d15f8bc`. The five original findings were
+corrected. The merge tree exactly matches the CI/scanned combined tree
+`b023a9631e8c7a890308f400f89fb0e630e36cc4`; parents are `f078b2df` and `58e30591`.
+This completes the reviewed advisory increment, not CP runtime acceptance. The original six-file increment was based on `3f4ee847`; the
 correction adds a seventh file for independent Windows Job Object ownership.
 The new CI merge parents independently bind main `f078b2df` and head `58e30591`;
-combined-source hosted verification and final review remain separate gates.
+combined-source hosted verification and final review passed before merge.
 
 | Requirements | Implemented advisory scope | Acceptance still open |
 | --- | --- | --- |
@@ -115,8 +118,9 @@ completed successfully at `6b0ccb25`.
 found five valid issues: hidden local ZIP-header metadata, collection failure
 upgraded to PASS, output bounds applied after process exit, skipped Windows tests
 reported PASS, and descendant cleanup after successful EXE launcher exit. All five
-have candidate corrections and regressions in `58e30591`; threads remain open
-pending revised-head verification.
+have verified corrections and regressions in `58e30591`; all five threads are
+resolved. [Final assessment](https://github.com/TenchiMisaki/romarr-ci-controller/pull/33#issuecomment-6941311587)
+independently covers exact head `58e30591` and reports no new actionable findings.
 
 The corrected implementation accounts for local/central archive layout, preserves
 collection failure, emits SKIPPED receipts, drains both streams live with bounded
@@ -138,8 +142,9 @@ existing deliberate duplicate-ZIP warnings. Windows Python 3.11 and 3.13 each ra
 **36 PASS / zero skips**; Linux ran **33 PASS / 3 Windows-only skips**. Compilation,
 public-artifact and live read-only smoke checks passed. These skips are the explicit
 OS gates for native Job Object tests, exercised on both Windows minors, not ROMarr
-source-suite skip acceptance. Exact-head CodeRabbit remains IN PROGRESS. Do not
-merge until the revised-head review and unresolved-thread gates pass.
+source-suite skip acceptance. Exact-head CodeRabbit completed successfully;
+all five threads are resolved. The actual combined merge tree was independently
+reconstructed and passed Gitleaks with zero findings.
 Gitleaks 8.30.1 final-tree/outgoing-history/exact-server-history scans passed with
 zero findings. Server tree `55a54d4c78123a7d913886bd3e16afd33064f105` matched the
 scanned payload. Privacy/provenance review completed; no substantial maintainer
@@ -157,6 +162,28 @@ No release builds/publishing, new credentials, source/platform scheduler,
 automatic remediation, production changes or fallback retirement were introduced.
 
 ### Remaining operational gates and execution limits
+
+**Post-merge live preflight — November 17, 2026:** current main is
+`485bb794d08fbded30ca80f5c735d3e3d9bcf2b7`. Independent authenticated GitHub
+reads returned 404 for the dedicated `controller-state-v1` branch and the exact
+`controller-revision-485bb794d08fbded30ca80f5c735d3e3d9bcf2b7` tag. The existing
+manual exact-PR advisory workflow is present at this revision. Real durable-backend
+race/restart/dispatch acceptance is therefore **BLOCKED: storage and immutable
+revision prerequisites are not provisioned**. No canary, state/tag creation,
+security-setting change or source dispatch was performed by this preflight.
+
+The implementation still has no installed authenticated owner entrypoint bound to
+an accepted deployment/authorization record, notification provider or complete
+trusted full-suite source receipt. These remain independent development and
+operational gates. Provisioning must preserve role isolation, immutable-ref and
+state protections, prepublication scanning and recoverable originals; it must not
+be bundled with unattended enablement or credential-service deployment.
+
+Private owner-guidance original-byte transfer was retried with the current helper
+and failed at service discovery with DNS before any file download/replacement.
+Permanent private-reference publication and Project Instructions synchronization
+remain **BLOCKED / PENDING**, respectively. Existing public continuity rules are
+preserved in this companion; no local candidate is claimed published privately.
 
 - Complete independent source/test/JUnit/skip/job/artifact receipt acceptance;
   the preserved 70-case manual workflow remains advisory.
@@ -470,7 +497,7 @@ still fails DNS. Do not infer unavailable toolchains or live platform acceptance
 
 Before continuing, review this backlog, [controller README](https://github.com/TenchiMisaki/romarr-ci-controller/blob/main/README.md), [VALIDATION.md](https://github.com/TenchiMisaki/romarr-ci-controller/blob/main/VALIDATION.md), applicable repository `AGENTS.md`, and current source, GitHub Actions jobs and CodeRabbit reviews. Reconcile the controller's current `main` revision, relevant fork branches, target PR head/base SHAs and claim/run identities. Previous green tests belong to their exact revisions, not a later moving head.
 
-**Resume from the Current integrated development section above: PR #32 is merged; finish PR #33 revised-head combined-source CI/review, then independently gated hosted and platform acceptance.** Do not repeat accepted source tests, confuse read-only workflow successes with hosted source acceptance, merge the review PR, or silently enable privileged automation. Stop only at the real security, owner-controlled GitHub, upstream or production boundaries.
+**Resume from the Current integrated development section above: PR #32 and PR #33 are merged; continue independently gated hosted state/dispatch/recovery and platform acceptance.** Do not repeat accepted source tests, confuse read-only workflow successes with hosted source acceptance, merge the review PR, or silently enable privileged automation. Stop only at the real security, owner-controlled GitHub, upstream or production boundaries.
 
 ## Approved scope expansion — cross-platform evidence verification (November 16, 2026)
 
