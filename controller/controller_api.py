@@ -18,6 +18,10 @@ from stage6_pr_identity_v32 import CONTROLLER_REPO, SOURCE_REPO, SHA
 from watch import claim_name, legacy_claim_name
 
 
+class ReadNotFound(StateBlocked):
+    """A GET returned 404; absence and hidden/inaccessible data remain ambiguous."""
+
+
 class NoRedirect(HTTPRedirectHandler):
     """Never send a credential to a redirect destination."""
 
@@ -94,7 +98,10 @@ class RestrictedAPI:
                         raise StateBlocked('API_JSON_INVALID') from None
             except HTTPError as exc:
                 transient = exc.code in {408, 429, 500, 502, 503, 504}
+                not_found = method == 'GET' and exc.code == 404
                 exc.close()
+                if not_found:
+                    raise ReadNotFound('API_READ_NOT_FOUND_OR_NOT_VISIBLE') from None
                 if method != 'GET' or not transient or attempt == 3:
                     raise StateBlocked('API_HTTP_FAILURE') from None
             except (URLError, TimeoutError, ConnectionError, OSError):
@@ -147,12 +154,7 @@ class GitHubPorts:
 
     def _revision(self, sha):
         """Require a lightweight tag pointing directly to the pinned controller."""
-        ref = 'tags/controller-revision-' + sha
-        tag = self.reader.request('GET', PREFIX + 'git/ref/' + ref)
-        if (type(tag) is not dict or tag.get('ref') != 'refs/' + ref
-                or tag.get('object', {}).get('type') != 'commit'
-                or tag['object'].get('sha') != sha):
-            raise StateBlocked('IMMUTABLE_CONTROLLER_REF_UNVERIFIED')
+        verify_controller_revision(self.reader, sha)
 
     def dispatch(self, controller_sha, inputs):
         """Request direct run details once, keeping missing response uncertain."""
@@ -164,3 +166,16 @@ class GitHubPorts:
                 ref='controller-revision-' + controller_sha, inputs=inputs, return_run_details=True))
         self._revision(controller_sha)
         return 200, body
+
+
+def verify_controller_revision(reader, sha):
+    """Check exact tag identity only; this does not prove ref protection."""
+    if type(sha) is not str or not SHA.fullmatch(sha):
+        raise StateBlocked('CONTROLLER_SHA_INVALID')
+    ref = 'tags/controller-revision-' + sha
+    tag = reader.request('GET', PREFIX + 'git/ref/' + ref)
+    if (type(tag) is not dict or tag.get('ref') != 'refs/' + ref
+            or type(tag.get('object')) is not dict
+            or tag['object'].get('type') != 'commit'
+            or tag['object'].get('sha') != sha):
+        raise StateBlocked('IMMUTABLE_CONTROLLER_REF_UNVERIFIED')
