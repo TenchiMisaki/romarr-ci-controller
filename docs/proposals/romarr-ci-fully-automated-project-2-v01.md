@@ -214,7 +214,7 @@ workflow caller, source execution or unattended activation was provisioned.
 ### Ordered full-source receipt collection — IN PROGRESS
 
 [PR #37](https://github.com/TenchiMisaki/romarr-ci-controller/pull/37) is OPEN /
-UNMERGED at `912644fc803be6a853e078fa9360c3dcde990ec6`, based on `f2842962`.
+UNMERGED at corrected head `8fca04b4a0ecbc47bf381f5101cd9c3f112f9e60`, based on `f2842962`.
 The dormant collector enforces exact eligible PR/current-base, complete metadata,
 source recheck, bounded artifact download, envelope validation, independent
 execution provenance and final metadata/source read order. It accepts only
@@ -234,8 +234,19 @@ passed with zero findings, verified scanner and positive control. Tree
 [CI #44137393619](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44137393619)
 passed **461 unittest cases / 3 Windows-only skips** and **296 pytest cases**,
 compilation/public-artifact/read-only smoke checks. Its merge tree and parents
-`f2842962` / `912644fc` were independently verified. Exact-head CodeRabbit remains
-IN PROGRESS; merge is still gated.
+`f2842962` / `912644fc` were independently verified.
+[Initial CodeRabbit finding](https://github.com/TenchiMisaki/romarr-ci-controller/pull/37#discussion_r4603397444)
+identified uncaught ordinary callback exceptions. Corrected head `8fca04b4`
+returns only a fixed sanitized BLOCKED result for ordinary exceptions, preserving
+KeyboardInterrupt/SystemExit. **121 combined focused tests PASS**, including
+new generic metadata/download/provenance errors and process-control propagation.
+Corrected tree `8be1e4b20be427d9792e2078c65fa8678321c5c7` and exact outgoing/server
+histories passed zero-finding scans.
+[Corrected CI #44139201775](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44139201775)
+passed **463 unittest cases / 3 Windows-only skips** and **296 pytest cases**,
+compilation/public-artifact/read-only checks. Its exact merge tree/parents and
+complete tree/history security scans passed. Corrected-head CodeRabbit remains
+IN PROGRESS; merge remains gated.
 
 The caller must independently approve the full-suite producer/workflow/job/steps
 and execution provenance. The existing focused advisory producer does not emit
