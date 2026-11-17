@@ -355,12 +355,12 @@ receipts, caller identity, native/fallback collisions, alert delivery and recove
 remain separate acceptance gates. No schedule, fallback, permissions or source
 execution was changed. Stage 5 operational acceptance remains IN PROGRESS.
 
-### Approved disabled storage/revision bootstrap — ADMIN ACCESS PENDING
+### Approved disabled storage/revision bootstrap — PARTIALLY CONFIGURED / ENFORCEMENT PENDING
 
 The owner explicitly approved the exact disabled bootstrap and additive
 protection scope on November 17, 2026. This approval persists; no repeat routine
-approval is needed. The configuration is **APPROVED / NOT APPLIED** and remains
-blocked on a supported authenticated administrative publisher. Existing protections
+approval is needed. The scope is **APPROVED / PARTIALLY CONFIGURED**. Provisioning and actual
+enforcement acceptance remain incomplete. Existing protections
 must be preserved; any additional security-sensitive scope requires separate approval. The current
 connection exposes repository reads and ordinary Git/PR writes, but no ruleset
 write capability; that is a tool boundary, not evidence that protection was set.
@@ -376,9 +376,17 @@ Applicable classic protections and branch-rule enumeration remain NOT VERIFIED.
 | Revision protection | New active tag ruleset matching only `refs/tags/controller-revision-*`; block updates/deletions, no bypass actors | Independently read back actual settings and refusal behavior; future exceptional recovery remains a separate owner-controlled change |
 
 Approval covers only the listed disabled bootstrap and additive protections.
-Administrative authentication is pending; no ruleset or ref has been created by
-this checkpoint. Ownership/admin permission, all existing protections and actual
-enforcement must be independently verified after authentication. Configuration
+The owner manually created revision-tag ruleset `27484547`. Independent REST
+readback confirms Active, exactly `refs/tags/controller-revision-*`, update and
+deletion restrictions, an empty bypass list and `current_user_can_bypass=never`.
+The ruleset list still contains only that ruleset and unchanged main ruleset
+`27344007`; the dedicated state-branch ruleset is NOT OBSERVED. This is
+configuration evidence, not an actual rejected-write test. No bootstrap ref was
+created by this work. The Work cloud-browser handoff failed before sign-in;
+the owner directed continued use of the connected GitHub tools instead.
+Ownership/admin permission and classic protections remain separate verification
+gaps. The connector still cannot write rulesets; no new authentication or
+credentials are requested for routine development. Configuration
 readback alone is not enforcement acceptance. No credential deployment, actual
 trial approval record, source dispatch, scheduled caller, unattended activation
 or fallback retirement is bundled into this approval. After supported provisioning and readback,
@@ -437,7 +445,7 @@ remain preserved here; no private content or package is copied into this reposit
   state/dispatch/recovery acceptance path from merged `8a981726`. Local Git,
   read-only preflight, owner-trial binding and ordered full-source collection
   libraries are complete. The approved bootstrap/protection scope above
-  remains ADMIN ACCESS PENDING; do not repeat accepted tests or create another
+  remains PARTIALLY CONFIGURED / ENFORCEMENT PENDING; do not repeat accepted tests or create another
   tracker. Preserve live acceptance gates and disabled unattended operation.
 
 ## Current Stage 6 continuation — November 16, 2026 (Pacific)
