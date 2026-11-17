@@ -156,11 +156,15 @@ class GitHubPorts:
         """Require a lightweight tag pointing directly to the pinned controller."""
         verify_controller_revision(self.reader, sha)
 
-    def dispatch(self, controller_sha, inputs):
+    def dispatch(self, controller_sha, inputs, *, pre_post=None):
         """Request direct run details once, keeping missing response uncertain."""
         if not SHA.fullmatch(str(controller_sha)):
             raise StateBlocked('CONTROLLER_SHA_INVALID')
+        if pre_post is not None and not callable(pre_post):
+            raise StateBlocked('DISPATCH_APPROVAL_CALLBACK_INVALID')
         self._revision(controller_sha)
+        if pre_post is not None and pre_post() is not True:
+            raise StateBlocked('DISPATCH_APPROVAL_REJECTED_BEFORE_POST')
         body = self.dispatcher.request('POST', PREFIX + 'actions/workflows/'
             + WORKFLOW.rsplit('/', 1)[1] + '/dispatches', dict(
                 ref='controller-revision-' + controller_sha, inputs=inputs, return_run_details=True))

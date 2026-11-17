@@ -151,6 +151,44 @@ ref-protection evidence. No owner authorization, credential isolation, live
 concurrency/recovery, full-suite receipt or notification acceptance is inferred.
 The collector is a dormant library, not an installed entrypoint or workflow.
 
+### Owner-bound single-revision advisory trial
+
+`owner_trial.TrialApproval` validates bounded canonical approval bytes against a
+SHA-256 pin supplied independently by a trusted deployment. The record binds
+the fixed controller/source repositories, authenticated owner's numeric ID,
+controller SHA, manual advisory workflow, exact PR/head/base, and issued/expiry
+times. The accepted scope is only `single-revision-advisory-trial-v1`; it does
+not approve general unattended operation, test acceptance or publication.
+Synthetic tests use an ancient time window and are not live approval records.
+
+`OwnerTrialController` reuses the existing coordinator, owner identity checks,
+durable CAS/readback, one-outstanding-claim limit and historical source dedup.
+It checks the immutable approval's scope/time before arming, reservation, the
+durable dispatch fence and immediately before POST. Expiry after fencing leaves
+the claim uncertain with no POST; it never silently frees a claim. Authenticated
+disarm and explicit known-run reconciliation remain possible after expiry.
+Checks cannot recall a POST already issued or certify future clock accuracy.
+
+The trial supplies a `pre_post` predicate to `GitHubPorts.dispatch`. The adapter
+rechecks it after its last pre-POST revision-tag GET, directly before the mutating
+request, so approval cannot pass once and then expire during that network lookup.
+An adapter that cannot honor this callback must fail rather than drop the guard.
+The no-retry rule and uncertain persisted claim remain unchanged on rejection.
+
+The trusted host must obtain actual owner approval independently and protect
+the expected digest, controller, clock, source isolation and API roles. A hash
+computed from caller-supplied JSON is not authentication. No code here loads
+approval from a PR, source-job result, environment flag or workflow input. The
+existing base coordinator's default-disabled boolean remains a low-level trusted
+host capability, not standalone approval proof. Only the scope-bound subclass
+adds this trial binding; a host must not substitute the unbound base class.
+
+This is a dormant library integration, not an installed authenticated owner
+entrypoint or accepted deployment. No real approval record, credential service,
+state storage, protected tag or scheduled caller is provisioned. Hosted state
+protections, authenticated owner execution, expiry/recovery behavior and one
+bounded trial still require their independent operational acceptance evidence.
+
 ## Recovery
 
 Read the exact stored claim and authenticated run/receipt evidence. Preserve

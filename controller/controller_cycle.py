@@ -105,6 +105,14 @@ class Controller:
         self.store, self.ports = store, ports
         self.sha, self.accepted = controller_sha, operational_acceptance
 
+    def _accepted(self, source=None):
+        """Return the trusted-host capability; subclasses may bind its scope."""
+        return self.accepted
+
+    def _dispatch(self, source, inputs):
+        """Use the trusted dispatcher; subclasses may add a final POST guard."""
+        return self.ports.dispatch(self.sha, inputs)
+
     def _change(self, operation):
         """Validate both sides of every persisted state transition."""
         def update(state):
@@ -181,7 +189,7 @@ class Controller:
                 or user['id'] != OWNER_ID or repository.get('full_name') != CONTROLLER_REPO
                 or repository.get('owner', {}).get('id') != OWNER_ID):
             raise StateBlocked('AUTHENTICATED_OWNER_REQUIRED')
-        if enabled and not self.accepted:
+        if enabled and not self._accepted():
             raise StateBlocked('OPERATIONAL_ACCEPTANCE_REQUIRED')
         def update(state):
             state['policy']['enabled'] = enabled
@@ -202,7 +210,7 @@ class Controller:
         if legacy is not False:
             raise StateBlocked('LEGACY_CLAIM_OR_COLLECTION_UNCERTAIN')
         def update(state):
-            if not self.accepted or not state['policy']['enabled']:
+            if not self._accepted(source) or not state['policy']['enabled']:
                 raise StateBlocked('DISARMED_OR_NOT_ACCEPTED')
             key = revision_key(source)
             if key in state['claims']:
@@ -227,10 +235,12 @@ class Controller:
         """
         def begin(state):
             claim = state['claims'].get(key)
-            if (not self.accepted or not state['policy']['enabled'] or not claim
+            if (not state['policy']['enabled'] or not claim
                     or claim['nonce'] != nonce or claim['state'] != 'RESERVED'
                     or claim['generation'] != state['policy']['generation']
                     or claim['controller'] != self.sha):
+                raise StateBlocked('DISPATCH_FENCE_REJECTED')
+            if not self._accepted(ExactPR(claim['pr'], claim['head'], claim['base'])):
                 raise StateBlocked('DISPATCH_FENCE_REJECTED')
             claim['state'] = 'DISPATCH_UNCERTAIN'
             return dict(claim)
@@ -243,7 +253,9 @@ class Controller:
         if (state['policy'] != dict(enabled=True, generation=claim['generation'])
                 or state['claims'].get(key) != claim):
             raise StateBlocked('POLICY_OR_CLAIM_CHANGED_BEFORE_POST')
-        status, body = self.ports.dispatch(self.sha, dict(
+        if not self._accepted(source):
+            raise StateBlocked('ACCEPTANCE_CHANGED_BEFORE_POST')
+        status, body = self._dispatch(source, dict(
             pr_number=str(source.pr_number), head_sha=source.head_sha,
             base_sha=source.base_sha, claim_nonce=claim['nonce']))
         run_id = dispatch_run_id(status, body)

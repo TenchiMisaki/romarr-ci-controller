@@ -72,8 +72,10 @@ class Ports:
         """Model the mandatory v1/v2 collision gate."""
         return self.legacy
 
-    def dispatch(self, controller_sha, inputs):
+    def dispatch(self, controller_sha, inputs, *, pre_post=None):
         """Record one exact dispatch request without running source."""
+        if pre_post is not None and pre_post() is not True:
+            raise StateBlocked('DISPATCH_APPROVAL_REJECTED_BEFORE_POST')
         self.posts += 1
         self.inputs = inputs
         self.observed['display_title'] = (f"Stage 6 PR {inputs['pr_number']} h-{inputs['head_sha']} "
