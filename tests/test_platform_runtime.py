@@ -1,13 +1,17 @@
 """Probe safety and classification tests; no candidate or Docker execution."""
 import hashlib
 import json
+import os
 from pathlib import Path
+import sys
 import tempfile
+import time
 import unittest
+from unittest.mock import patch
 
 from platform_runtime import (AttestationVerifier,DockerProbe,private_environment,
-    windows_pytest,windows_exe_smoke)
-from platform_receipts import PlatformRejected
+    windows_pytest,windows_exe_smoke,command,native_process)
+from platform_receipts import PlatformRejected,verify_platform
 import test_platform_receipts
 
 
@@ -136,6 +140,30 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(result['test'],'PASS');self.assertEqual(result['cases'],[dict(ordinal=1,outcome='passed')])
         self.assertNotIn('private name',str(result))
 
+    def test_windows_skips_produce_valid_blocked_receipt(self):
+        env,source,private,exe=self.windows_fixture()
+        def run(args, **kwargs):
+            """Return a successful pytest invocation containing a real skip."""
+            if 'rev-parse' in args:return 0,('a'*40).encode()
+            if 'get-url' in args:return 0,b'https://github.com/example/source.git'
+            if 'status' in args or 'ls-files' in args:return 0,b''
+            if '-c' in args:return 0,b'3.11\n'
+            (private/'junit.xml').write_text('<testsuite tests="1" errors="0" failures="0" skipped="1"><testcase name="private"><skipped/></testcase></testsuite>')
+            return 0,b''
+        result=windows_pytest(executable=exe,source=source,source_repo='example/source',
+            source_sha='a'*40,version='3.11',private=private,environ=env,run=run)
+        self.assertEqual(result['test'],'SKIPPED')
+        fixture=test_platform_receipts.PlatformReceiptTests();fixture.setUp()
+        from dataclasses import replace
+        fixture.expected=replace(fixture.expected,platform='windows-py311',subject_sha256=None,scope='source-focused')
+        fixture.receipt.update(platform='windows-py311',subject_sha256=None,scope='source-focused',counts=result['counts'])
+        fixture.receipt['dimensions'].update(test=result['test'],collection=result['collection'])
+        fixture.cases['cases']=result['cases']
+        expected,evidence=fixture.evidence()
+        verified=verify_platform(expected,**evidence,verify_subject=lambda e:(e.source_repo,e.source_sha,e.subject_sha256))
+        self.assertEqual(verified.state,'ADVISORY_BLOCKED')
+        self.assertEqual(verified.dimensions['test'],'SKIPPED')
+
     def test_native_executable_digest_checked_before_launch(self):
         env,source,private,exe=self.windows_fixture()
         with self.assertRaises(PlatformRejected):windows_exe_smoke(executable=exe,
@@ -155,6 +183,87 @@ class RuntimeTests(unittest.TestCase):
         result=windows_exe_smoke(executable=exe,expected_sha256=hashlib.sha256(exe.read_bytes()).hexdigest(),
             private=private,environ=env,run=run)
         self.assertEqual(result,dict(startup='PASS',test='PASS',provenance='BLOCKED'))
+
+
+class ProcessTests(unittest.TestCase):
+    """Real safe controller-owned processes, never ROMarr or prepared packages."""
+
+    def test_both_pipes_drained_and_only_stdout_returned(self):
+        rc, raw = command([sys.executable,'-c',
+            "import os;os.write(1,b'a'*200000);os.write(2,b'b'*200000)"], env=dict(os.environ),timeout=10)
+        self.assertEqual(rc,0);self.assertEqual(raw,b'a'*200000)
+
+    def test_live_noisy_streams_are_stopped_without_disk_spooling(self):
+        for stream in (1,2):
+            start=time.monotonic()
+            with self.assertRaisesRegex(PlatformRejected,'OUTPUT_BOUND'):
+                command([sys.executable,'-c',
+                    f"import os;\nwhile True: os.write({stream},b'x'*65536)"],env=dict(os.environ),timeout=10)
+            self.assertLess(time.monotonic()-start,8)
+
+    def test_exit_race_still_checks_final_output_and_nonzero_exit(self):
+        with self.assertRaisesRegex(PlatformRejected,'OUTPUT_BOUND'):
+            command([sys.executable,'-c',"import os;os.write(1,b'x'*1048577)"],env=dict(os.environ),timeout=10)
+        self.assertEqual(command([sys.executable,'-c','raise SystemExit(7)'],env=dict(os.environ)),(7,b''))
+
+    def test_deadline_and_missing_executable_fail_closed(self):
+        with self.assertRaisesRegex(PlatformRejected,'TIMEOUT'):
+            command([sys.executable,'-c','import time;time.sleep(10)'],env=dict(os.environ),timeout=.2)
+        with self.assertRaises(PlatformRejected):
+            command(['unavailable-controller-fixture-986263.exe'],env=dict(os.environ))
+
+    @unittest.skipUnless(os.name=='nt','Windows Job Object acceptance requires Windows')
+    def test_successful_launcher_exit_terminates_surviving_child(self):
+        with tempfile.TemporaryDirectory() as private:
+            ready=Path(private)/'ready'
+            child="import os,time;from pathlib import Path;Path("+repr(str(ready))+").write_text(str(os.getpid()));time.sleep(60)"
+            parent="import subprocess,sys,time;from pathlib import Path;subprocess.Popen([sys.executable,'-c',"+repr(child)+"]);\nwhile not Path("+repr(str(ready))+").exists(): time.sleep(.01)"
+            self.assertEqual(native_process([sys.executable,'-c',parent],env=dict(os.environ),timeout=10),(0,b''))
+            self.assert_pid_stopped(int(ready.read_text()))
+
+    @unittest.skipUnless(os.name=='nt','Windows Job Object acceptance requires Windows')
+    def test_timeout_terminates_owned_child(self):
+        with tempfile.TemporaryDirectory() as private:
+            ready=Path(private)/'ready'
+            child="import os,time;from pathlib import Path;Path("+repr(str(ready))+").write_text(str(os.getpid()));time.sleep(60)"
+            parent="import subprocess,sys,time;subprocess.Popen([sys.executable,'-c',"+repr(child)+"]);time.sleep(60)"
+            with self.assertRaisesRegex(PlatformRejected,'NATIVE_SMOKE_TIMEOUT'):
+                native_process([sys.executable,'-c',parent],env=dict(os.environ),timeout=2)
+            self.assert_pid_stopped(int(ready.read_text()))
+
+    @unittest.skipUnless(os.name=='nt','Windows Job Object acceptance requires Windows')
+    def test_assignment_failure_never_runs_application(self):
+        from platform_windows import OwnedWindowsProcess
+        original=OwnedWindowsProcess._bind
+        def deny_assignment(process):
+            """Deny the actual OS assignment after real suspended creation."""
+            original(process)
+            process._api.AssignProcessToJobObject=lambda *args:False
+        with tempfile.TemporaryDirectory() as private:
+            marker=Path(private)/'must-not-exist'
+            with patch.object(OwnedWindowsProcess,'_bind',deny_assignment):
+                with self.assertRaises(PlatformRejected):
+                    native_process([sys.executable,'-c',"from pathlib import Path;Path("+repr(str(marker))+").touch()"],env=dict(os.environ),timeout=5)
+            self.assertFalse(marker.exists())
+
+    def assert_pid_stopped(self,pid):
+        """Observe the fixture PID without ever terminating by PID or name."""
+        import ctypes
+        from ctypes import wintypes
+        api=ctypes.WinDLL('kernel32',use_last_error=True)
+        api.OpenProcess.argtypes=[wintypes.DWORD,wintypes.BOOL,wintypes.DWORD]
+        api.OpenProcess.restype=wintypes.HANDLE
+        api.WaitForSingleObject.argtypes=[wintypes.HANDLE,wintypes.DWORD]
+        api.WaitForSingleObject.restype=wintypes.DWORD
+        api.CloseHandle.argtypes=[wintypes.HANDLE]
+        handle=api.OpenProcess(0x100000,False,pid)
+        if not handle:
+            self.assertEqual(ctypes.get_last_error(),87)
+            return
+        # Job accounting can reach zero just before the process object becomes
+        # signaled; bound and observe actual termination rather than racing it.
+        try:self.assertEqual(api.WaitForSingleObject(handle,5000),0)
+        finally:api.CloseHandle(handle)
 
 
 if __name__=='__main__':unittest.main()

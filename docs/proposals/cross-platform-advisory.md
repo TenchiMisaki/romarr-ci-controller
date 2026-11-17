@@ -11,6 +11,29 @@ invalidate prior exact-source evidence or become implicit activation conditions.
 
 ## Current implementation and limits
 
+### Review correction verification — November 17, 2026
+
+The five findings on the initial PR #33 head are corrected in the review candidate:
+local ZIP headers and every archive byte are accounted for; failed collection is
+preserved; both output streams are drained with a live 1 MiB retention limit;
+Windows skips produce a valid blocked receipt; and Windows processes are created
+suspended, assigned to a kill-on-close Job Object, then resumed. Cleanup terminates
+and checks the job even after a successful launcher exit. Only explicitly listed
+standard handles are inherited. No process-name or unrelated-PID termination is used.
+
+Local Python 3.15.2 on Windows: **36 controller tests PASS**, including actual safe
+Python process trees for launcher-exit, timeout and assignment-denial cases, live
+stdout/stderr overflow and producer-to-receipt skip handling. Initial local failures
+(missing import, incomplete JUnit fixture and a termination-observation race) were
+corrected before publication. Hosted Linux/Windows 3.11/3.13 and exact-head review
+remain separate pending gates. These fixtures do not run ROMarr, candidate images
+or packaged executables and do not establish platform runtime acceptance.
+
+The process adapter is independently implemented from documented Win32 contracts:
+[job ownership](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects),
+[suspended assignment](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-assignprocesstojobobject),
+and the explicit inherited-handle list. No third-party implementation was copied.
+
 | Requirement | Advisory implementation | Remaining acceptance |
 | --- | --- | --- |
 | CP-01 Docker runtime | Digest-pinned prepared-image probe; local socket; no pull/build/push, host bind or published port; network none, non-root, read-only filesystem, resource limits, three consecutive health passes, identity and cleanup checks | Real standard/browser candidate runs, application assertions beyond health, negative startup/dependency/isolation/cleanup tests on disposable hosted Linux; platform/architecture policy |

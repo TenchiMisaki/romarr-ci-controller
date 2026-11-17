@@ -3,6 +3,7 @@ from dataclasses import replace
 import hashlib
 import io
 import json
+import struct
 import unittest
 import zipfile
 
@@ -136,6 +137,37 @@ class PlatformReceiptTests(unittest.TestCase):
         with zipfile.ZipFile(out,'a') as archive:archive.comment=b'private synthetic metadata'
         commented=out.getvalue()
         with self.assertRaises(PlatformRejected):read_bundle(commented,hashlib.sha256(commented).hexdigest())
+
+    def test_local_only_extra_and_padding_cannot_hide_private_bytes(self):
+        raw, _ = self.bundle()
+        # Insert a local-only field; adjust every subsequent offset and EOCD so
+        # ordinary zipfile still reads all three unmodified JSON members.
+        length = struct.unpack_from('<H', raw, 26)[0]
+        at = 30+length
+        hidden = b'\xfe\xca\x04\x00hide'
+        altered = bytearray(raw[:at]+hidden+raw[at:])
+        struct.pack_into('<H', altered, 28, len(hidden))
+        central = struct.unpack_from('<I', raw, len(raw)-6)[0]+len(hidden)
+        pos = central
+        for index in range(3):
+            if index:
+                offset = struct.unpack_from('<I', altered, pos+42)[0]
+                struct.pack_into('<I', altered, pos+42, offset+len(hidden))
+            name, extra, comment = struct.unpack_from('<3H', altered, pos+28)
+            pos += 46+name+extra+comment
+        struct.pack_into('<I', altered, len(altered)-6, central)
+        with zipfile.ZipFile(io.BytesIO(altered)) as archive:
+            self.assertFalse(archive.infolist()[0].extra)
+            self.assertEqual(archive.read('receipt.json'), canonical(self.receipt))
+        with self.assertRaises(PlatformRejected):
+            read_bundle(bytes(altered), hashlib.sha256(altered).hexdigest())
+
+    def test_collection_failure_is_never_upgraded_by_valid_case_counts(self):
+        for state in ('COLLECTION_FAILED', 'INCOMPLETE', 'NOT_TESTED', 'FAIL'):
+            self.receipt['dimensions']['collection'] = state
+            result = self.verified()
+            self.assertEqual(result.dimensions['collection'], state)
+            self.assertEqual(result.state, 'ADVISORY_BLOCKED')
 
     def test_cross_platform_failure_dimensions_remain_separate(self):
         self.receipt['dimensions']['environment']='UNSUPPORTED'

@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import signal
+import threading
 import tempfile
 import time
 import uuid
@@ -37,17 +39,80 @@ def private_environment(environ):
 
 
 def command(args, *, env, cwd=None, timeout=30):
-    """Run without a shell; retain bounded output privately with a deadline."""
-    with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
+    """Drain both pipes live with bounded memory and owned-tree cleanup."""
+    return _bounded_process(args, env=env, cwd=cwd, timeout=timeout)
+
+
+def _bounded_process(args, *, env, cwd=None, timeout, timeout_code='PLATFORM_COMMAND_UNAVAILABLE_OR_TIMEOUT'):
+    """Retain at most 1 MiB per stream; overflow stops the entire owned tree."""
+    process = None
+    threads = []
+    overflow, read_failed = threading.Event(), threading.Event()
+    buffers = [bytearray(), bytearray()]
+    limit = 1024*1024
+
+    def drain(stream, retained):
+        """Continue draining/discarding until cleanup closes the writers."""
         try:
-            process = subprocess.run(args, env=env, cwd=cwd, timeout=timeout,
-                stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr, shell=False)
-        except (OSError, subprocess.TimeoutExpired):
-            raise PlatformRejected('PLATFORM_COMMAND_UNAVAILABLE_OR_TIMEOUT') from None
-        if stdout.tell() > 1024*1024 or stderr.tell() > 1024*1024:
-            raise PlatformRejected('PLATFORM_COMMAND_OUTPUT_BOUND')
-        stdout.seek(0)
-        return process.returncode, stdout.read()
+            while True:
+                chunk = stream.read(65536)
+                if not chunk:
+                    return
+                room = limit-len(retained)
+                retained.extend(chunk[:room])
+                if len(chunk) > room:
+                    overflow.set()
+        except (OSError, ValueError):
+            read_failed.set()
+
+    try:
+        if os.name == 'nt':
+            from platform_windows import OwnedWindowsProcess
+            process = OwnedWindowsProcess(args, env=env, cwd=cwd)
+        else:
+            process = subprocess.Popen(args, env=env, cwd=cwd, stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0,
+                shell=False, start_new_session=True)
+        for stream, retained in zip((process.stdout, process.stderr), buffers):
+            thread = threading.Thread(target=drain, args=(stream, retained), daemon=True)
+            threads.append(thread)
+            thread.start()
+        deadline = time.monotonic()+timeout
+        while process.poll() is None:
+            if overflow.is_set():
+                raise PlatformRejected('PLATFORM_COMMAND_OUTPUT_BOUND')
+            if read_failed.is_set():
+                raise PlatformRejected('PLATFORM_COMMAND_COLLECTION_FAILED')
+            if time.monotonic() >= deadline:
+                raise PlatformRejected(timeout_code)
+            time.sleep(.01)
+        returncode = process.returncode
+    except OSError:
+        raise PlatformRejected('PLATFORM_COMMAND_UNAVAILABLE_OR_TIMEOUT') from None
+    finally:
+        if process is not None:
+            try:
+                if os.name == 'nt':
+                    process.close()
+                else:
+                    try:
+                        os.killpg(process.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    process.wait(timeout=5)
+            finally:
+                for thread in threads:
+                    thread.join(timeout=5)
+                if any(thread.is_alive() for thread in threads):
+                    raise PlatformRejected('PLATFORM_COMMAND_CLEANUP_UNCONFIRMED')
+                for stream in (process.stdout, process.stderr):
+                    stream.close()
+    # The process may exit just before readers observe its final output.
+    if overflow.is_set():
+        raise PlatformRejected('PLATFORM_COMMAND_OUTPUT_BOUND')
+    if read_failed.is_set():
+        raise PlatformRejected('PLATFORM_COMMAND_COLLECTION_FAILED')
+    return returncode, bytes(buffers[0])
 
 
 def runner_gate(environ, os_name):
@@ -256,37 +321,19 @@ def windows_pytest(*, executable, source, source_repo, source_sha, version,
     if b'<!DOCTYPE' in header or b'<!ENTITY' in header:
         raise PlatformRejected('WINDOWS_JUNIT_UNSAFE')
     counts, anonymous = collect_junit(junit)
-    return dict(environment='PASS', test='PASS' if rc == 0 and not counts['failed'] and not counts['errors'] else 'FAIL',
+    state = ('FAIL' if rc != 0 or counts['failed'] or counts['errors']
+             else 'SKIPPED' if counts['skipped'] else 'PASS')
+    return dict(environment='PASS', test=state,
                 collection='PASS', exit=rc, counts=counts,
                 cases=[dict(ordinal=i, outcome=x['outcome']) for i,x in enumerate(anonymous,1)])
 
 
 def native_process(args, *, env, timeout=180):
-    """Launch an owned Windows EXE invisibly and bound its full process tree.
-
-    Output files stay private. On timeout, taskkill targets only this still-owned
-    process tree; do not fall back to killing by executable name.
-    """
+    """Launch invisibly with pre-execution job assignment and owned cleanup."""
     if os.name != 'nt':
         raise PlatformRejected('NATIVE_WINDOWS_REQUIRED')
-    with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
-        process = subprocess.Popen(args, env=env, stdin=subprocess.DEVNULL,
-            stdout=stdout, stderr=stderr, shell=False, creationflags=subprocess.CREATE_NO_WINDOW)
-        try:
-            process.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            if process.poll() is None:
-                subprocess.run([str(Path(env['SystemRoot'])/'System32'/'taskkill.exe'),
-                    '/PID', str(process.pid), '/T', '/F'], env=env,
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=15,
-                    creationflags=subprocess.CREATE_NO_WINDOW, check=False)
-                process.wait(timeout=15)
-            raise PlatformRejected('NATIVE_SMOKE_TIMEOUT') from None
-        finally:
-            if process.poll() is None:
-                process.kill()
-                process.wait(timeout=15)
-        return process.returncode, b''
+    rc, _ = _bounded_process(args, env=env, timeout=timeout, timeout_code='NATIVE_SMOKE_TIMEOUT')
+    return rc, b''
 
 
 def windows_exe_smoke(*, executable, expected_sha256, private, environ=None, run=native_process):

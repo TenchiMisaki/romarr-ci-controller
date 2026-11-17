@@ -11,6 +11,7 @@ import io
 import json
 import re
 import stat
+import struct
 import zipfile
 
 SHA40 = re.compile(r'[0-9a-f]{40}\Z')
@@ -111,6 +112,7 @@ def read_bundle(raw, digest):
             if archive.comment or len(rows) != 3 or {x.filename for x in rows} != MEMBERS:
                 raise PlatformRejected('PLATFORM_MEMBER_ALLOWLIST')
             content = {}
+            cursor = 0
             for row in rows:
                 mode = row.external_attr >> 16
                 if (row.is_dir() or row.comment or row.extra or row.flag_bits & 1 or row.file_size > MAX_MEMBER
@@ -118,11 +120,38 @@ def read_bundle(raw, digest):
                         or stat.S_ISLNK(mode) or stat.S_IFMT(mode) not in {0, stat.S_IFREG}
                         or row.file_size > max(1, row.compress_size) * 100):
                     raise PlatformRejected('PLATFORM_MEMBER_UNSAFE')
+                # The central directory does not authenticate local-only fields.
+                # Require contiguous ordinary headers and compressed data, with
+                # no descriptors, prefixes, padding or unaccounted bytes.
+                if row.header_offset != cursor or cursor + 30 > len(raw):
+                    raise PlatformRejected('PLATFORM_LOCAL_HEADER_LAYOUT')
+                fields = struct.unpack_from('<4s5H3I2H', raw, cursor)
+                signature, version, flags, method, _, _, crc, packed, size, namesize, extra = fields
+                name = row.filename.encode('utf-8' if flags & 0x800 else 'cp437')
+                if (signature != b'PK\x03\x04' or version != row.extract_version
+                        or flags != row.flag_bits or flags & ~0x800 or method != row.compress_type
+                        or crc != row.CRC or packed != row.compress_size or size != row.file_size
+                        or extra or namesize != len(name)
+                        or raw[cursor+30:cursor+30+namesize] != name):
+                    raise PlatformRejected('PLATFORM_LOCAL_HEADER_METADATA')
+                cursor += 30 + namesize + packed
                 data = archive.read(row)
                 value = json.loads(data)
                 if canonical(value) != data:
                     raise PlatformRejected('PLATFORM_JSON_NOT_CANONICAL')
                 content[row.filename] = (data, value)
+            # Account for each central header and the single terminal EOCD.
+            central_start = cursor
+            for row in rows:
+                if raw[cursor:cursor+4] != b'PK\x01\x02' or cursor + 46 > len(raw):
+                    raise PlatformRejected('PLATFORM_CENTRAL_LAYOUT')
+                namesize, extrasize, commentsize = struct.unpack_from('<3H', raw, cursor+28)
+                if extrasize or commentsize:
+                    raise PlatformRejected('PLATFORM_CENTRAL_METADATA')
+                cursor += 46 + namesize
+            if (cursor != len(raw)-22 or struct.unpack_from('<4s4H2IH', raw, cursor)
+                    != (b'PK\x05\x06', 0, 0, 3, 3, cursor-central_start, central_start, 0)):
+                raise PlatformRejected('PLATFORM_UNACCOUNTED_ARCHIVE_BYTES')
             manifest = content['manifest.json'][1]
             expected = {name: hashlib.sha256(content[name][0]).hexdigest()
                         for name in ('receipt.json', 'cases.json')}
@@ -232,7 +261,7 @@ def verify_platform(expected, *, raw, run, jobs, artifact, source_before,
         if proof != (e.source_repo, e.source_sha, e.subject_sha256):
             raise PlatformRejected('INDEPENDENT_PROVENANCE_MISMATCH')
         result_dims['provenance'] = 'PASS'
-    result_dims['collection'] = 'PASS'
+    # Internal count consistency cannot establish completed producer collection.
     result_dims['freshness'] = 'PASS'
     required = {'environment', 'test', 'collection', 'provenance', 'freshness'}
     if e.subject_sha256 is not None:
