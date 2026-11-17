@@ -729,6 +729,51 @@ under the same permission scope and preserves all failed branches/history.
 Do not reuse the former d97d9ac9 input. No additional live run has started here. No live provider behavior is claimed fixed.
 Any further mutating diagnostic run requires owner authorization after review.
 
+### Owner-run response diagnostics — November 17, 2026, 13:37 PST
+
+[Run #44181621002](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44181621002)
+completed FAILED on exact main `3238861da233c43dff45a98cbf04be156eda68f9`,
+attempt 1, owner manual dispatch with correct approval. This supersedes the
+preceding request to start that diagnostic run; do not start another automatically.
+Job `134387131340` recorded eight created commits, one successful writer, zero
+recognized conflicts and seven PATCH 422 OTHER_RESPONSE failures at RACE_VALIDATE.
+Elapsed time was 9.47 seconds. Response-loss recovery was not reached;
+`operational_acceptance=NOT TESTED`.
+
+All seven responses were fully read, identity encoded, valid JSON objects with
+135 captured bytes. Captured-body SHA-256 was
+`4271677f740b2da719dadb4e51fa3d0f9cbb7177fda0d5844953ace3a2df951b`.
+The top-level message had 27 UTF-8 bytes and SHA-256
+`2fc6adcc79e37916350c5dfeacd0d0ac8f775d0dd6676af1e8e83a0f72b0069d`,
+independently matched to the exact literal **Reference cannot be updated**.
+No string error_message or errors list was present. This identifies the generic
+rejection text; it does not establish its cause or prove explicit non-fast-forward
+classification. Preserve the existing strict classifier and fail-closed result.
+
+The run uploaded artifact `14371937725`, name
+`controller-state-canary-44181621002-1`, 719 bytes, ZIP SHA-256
+`ec0f4573b22610902d62028d48e9ccc34c2dc7815eabd346a6697c418462bb5c`.
+These digest/size values are corroborated by the hosted upload log. Artifact
+retention is seven days; this record preserves the diagnostic facts independently.
+REST readback confirms retained head
+`156cabdc1b15d18ae966b3220fb4ded2146b8a4e` has sole parent seed
+`ab8ec6ac6f17dbfe31f9025ae22543e231d6fcc9`, whose sole parent is tested main
+`3238861da233c43dff45a98cbf04be156eda68f9`. Both canary commits have canonical
+disabled-state tree `023ee9a1690d81c8a9344839c125c721e62d9702`.
+Operational state ref remains `d2930189ec0aa9c59b1a2fdf108fe75892f9ad03`.
+No source execution, unattended activation, repair, retry, force update or deletion
+was performed. Preserve all retained canary branches and existing protections.
+
+**Focused next development:** prepare an isolated, reviewable proposal for
+independently validating every candidate's unique identity, canonical tree and
+sole seed parent, and separately reporting observed rejected sibling updates.
+Do not label generic rejection as explicit non-fast-forward or treat one winner
+as proof of protected operational-ref enforcement. Any changed canary acceptance
+criterion needs explicit owner approval before installation; one further mutating
+validation run also needs owner authorization. Existing implementation tests,
+privacy scans, exact-head CI/review and recovery gates remain required. Independent
+preparation and review may continue while those acceptance boundaries remain blocked.
+
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
 The owner explicitly approved the exact disabled bootstrap and additive
