@@ -711,7 +711,22 @@ candidate/server tree/history scans PASS.
 passed **497 unittest cases / 3 Windows-only skips / 296 pytest cases** and all
 compilation/artifact/read-only monitor steps. CI merge `50a06007` has exact tree
 `a0b40ddc` and parents `d97d9ac9` / `c90d1bbf`; its tree/history scans PASS.
-Incremental CodeRabbit review is PENDING on that correction head. No live provider behavior is claimed fixed.
+[Final CodeRabbit review](https://github.com/TenchiMisaki/romarr-ci-controller/pull/42#issuecomment-6961345535)
+completed on exact correction head `c90d1bbf` with no new actionable comments,
+no remaining merge-blocking risk or retained architecture concerns. Both initial
+threads are resolved. PR #42 merged at `3238861da233c43dff45a98cbf04be156eda68f9`;
+independent REST readback confirms exact tested/scanned tree `a0b40ddc` and parents
+`d97d9ac9` / `c90d1bbf`. Post-review reads reconfirm operational `d2930189`,
+revision tag `8a981726` and retained canary `f260759d` unchanged.
+
+One further bounded diagnostic run remains an owner decision; code publication
+or review does not authorize it automatically. To authorize and initiate it, the
+owner may open the official manual workflow, choose NEW Run workflow on main,
+completely replace the controller input with
+`3238861da233c43dff45a98cbf04be156eda68f9`, keep approval
+`CREATE_RETAINED_CANARY_ONLY`, and run once. This creates a new retained canary
+under the same permission scope and preserves all failed branches/history.
+Do not reuse the former d97d9ac9 input. No additional live run has started here. No live provider behavior is claimed fixed.
 Any further mutating diagnostic run requires owner authorization after review.
 
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
