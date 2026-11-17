@@ -86,10 +86,11 @@ Detailed design/recovery:
 These are implementation and controller-test results, not live hosted durable
 storage, dispatch/recovery, owner-control, complete receipt or scheduler acceptance.
 
-### Stage 6 real Git integration — IN PROGRESS
+### Stage 6 real Git integration — COMPLETE (local integration increment)
 
 [PR #34](https://github.com/TenchiMisaki/romarr-ci-controller/pull/34), branch
-`review/stage6-git-state-integration`, is OPEN / UNMERGED at
+`review/stage6-git-state-integration`, is **MERGED** into main at
+`fdb013cdb1314725eecfb6bf271a9b593be12208`; reviewed head
 `78c7d55581f895731a1ce5c6f286fb17f3f7e4a8`, based on main `485bb794`.
 Seven new integration tests use disposable bare repositories, real object IDs,
 sole-parent commits, ancestry, expected-old ref transactions and strict Git fsck.
@@ -118,8 +119,13 @@ complete-tree/outgoing/exact-server-history scans.
 passed **414 unittest cases / 3 Windows-only skips** and **296 pytest cases**,
 compilation, public-artifact and live read-only checks. Its merge tree is exactly
 `9522e1a2d74fc9987c9f21e63949431189bf496e`, with parents main `485bb794` and
-reviewed head `78c7d555`. CodeRabbit marked the original thread resolved;
-its substantive revised-head review remains IN PROGRESS. Merge remains pending.
+reviewed head `78c7d555`.
+[Final CodeRabbit assessment](https://github.com/TenchiMisaki/romarr-ci-controller/pull/34#issuecomment-6953852456)
+covers exact head `78c7d555`, reports no new actionable findings and confirms the
+original concern addressed; its thread is resolved. Independent main/commit
+readback verifies merge `fdb013cd` has the same tested/scanned tree and exact
+parents `485bb794` / `78c7d555`. This completes the isolated local Git integration
+increment; hosted operational acceptance remains IN PROGRESS / NOT ACCEPTED.
 
 The REST boundary is modeled; real Git object/ref behavior is exercised. These
 tests do not establish authenticated GitHub mutations, distributed scheduling,
@@ -246,10 +252,10 @@ remain preserved here; no private content or package is copied into this reposit
   3.11/3.13, packaged EXE, live images and signed-attestation acceptance still need
   their prepared artifacts and supported isolated executors. No platform acceptance
   is inferred from controller integration or contract tests.
-- Next: complete PR #34 exact-head review, address valid findings, and merge only
-  after its unchanged-source CI/security/ancestry gates. Then continue the existing
-  hosted owner-control, complete-receipt, state/dispatch/recovery acceptance path;
-  do not create a redundant tracker or enable unattended operation.
+- Next: continue the existing hosted owner-control, complete-receipt,
+  state/dispatch/recovery acceptance path from merged `fdb013cd`. The local Git
+  integration increment is complete; do not repeat its accepted tests or create a
+  redundant tracker. Keep live acceptance gates and unattended operation disabled.
 
 ## Current Stage 6 continuation — November 16, 2026 (Pacific)
 
