@@ -479,7 +479,8 @@ covers that exact SHA. Both original review threads are resolved; the second was
 closed with the correction/test evidence after final review completion.
 PR #39 merged at `68969a12e6968b58cb38e9490becda2bf359a16e`; independent
 Git and REST readback verifies exact tested/scanned tree `a3910e2f` and parents
-`cd320e3f` / `01a1541d`. The workflow remains INERT under `docs/proposals`.
+`cd320e3f` / `01a1541d`. At this PR #39 milestone the workflow was INERT
+under `docs/proposals`; the later approved PR #40 installation is recorded below.
 
 The owner explicitly APPROVED installation and one manual run of the reviewed
 canary on November 17, 2026 (Pacific). Approval covers its ephemeral job token
@@ -489,7 +490,7 @@ permits one new retained run-owned canary branch and append-only disabled-state
 commits, not operational-state/tag/protection changes, source execution,
 unattended policy, fallback retirement or repeat mutating attempts.
 
-### Manual canary installation — PR #40
+### Manual canary installation — PR #40 MERGED / RUN PENDING
 
 [PR #40](https://github.com/TenchiMisaki/romarr-ci-controller/pull/40) prepares
 head `574585475d9d5178f98b9b6af81f0a8ac514d2f8`, tree
@@ -519,18 +520,35 @@ passed **487 unittest cases / 3 Windows-only skips / 296 pytest cases** and all
 compilation/artifact/read-only monitor steps. CI merge `50d2c2ab` has exact tree
 `3a025d50` and parents `68969a12` / `bf089435`; its tree/history scans PASS.
 [Incremental review request](https://github.com/TenchiMisaki/romarr-ci-controller/pull/40#issuecomment-6960062561)
-is PENDING. The installed-workflow
-candidate and executor bytes are unchanged; no live canary has run.
+completed on exact head `bf089435` with no new actionable comments or retained
+architecture concerns. The original thread is resolved and marked addressed.
+[Final assessment](https://github.com/TenchiMisaki/romarr-ci-controller/pull/40#issuecomment-6959915173)
+retains the explicit broader repository token scope and interruption limits.
+PR #40 merged at `f09e7cf6b1f27ee10de7cc2dc120f1b2bd8638d2`.
+Independent REST merge readback confirms exact tested/scanned tree `3a025d50`
+and parents `68969a12` / `bf089435`. Installed workflow bytes match the reviewed
+candidate. The official public Actions API reports workflow ID `421843249`,
+name `Manual controller state canary`, expected path and state `active`.
+No executor/workflow behavior changed in the correction; no live canary has run.
 
 Pre-run independent reads reconfirm operational state ref `d2930189`, revision
 tag `8a981726`, and unchanged Active state/revision rulesets with exact targets,
 required restrictions and no bypass actors. These are configuration/ref checks,
-not actual refused-update/deletion behavior.
+not actual refused-update/deletion behavior. The official repository rule-suite
+history endpoint was also checked read-only; it returns integration HTTP 403,
+so historical refusal evidence cannot be verified through this connection.
+Do not infer absent or ineffective protections from that collection limit.
 
 The connector has no workflow-dispatch capability and local GitHub CLI is not
-authenticated. After review/installation readback, the owner must initiate the
-one approved run from the official GitHub website on `main`, with the exact
-installed main SHA and `CREATE_RETAINED_CANARY_ONLY` input. Do not request or
+authenticated. The owner must initiate the one approved run from the official
+[workflow page](https://github.com/TenchiMisaki/romarr-ci-controller/actions/workflows/controller-state-canary.yml):
+Run workflow, branch `main`, controller SHA
+`f09e7cf6b1f27ee10de7cc2dc120f1b2bd8638d2`, approval
+`CREATE_RETAINED_CANARY_ONLY`, then Run workflow once. If main moves, do not
+substitute an unreviewed SHA; the executor fails closed for a changed run SHA.
+After the owner runs it, inspect exact run/actor/head/jobs/logs/artifact,
+retained canary state/ancestry and unchanged operational ref/tag/protections.
+No repeat mutating run is implied by this handoff. Do not request or
 handle credentials in chat. No live canary has run; hosted observations,
 operational acceptance and actual real-ref protection refusals remain NOT TESTED.
 
