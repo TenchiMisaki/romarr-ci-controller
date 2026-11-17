@@ -1,4 +1,5 @@
 name: ROMarr Stage 6 - Manual exact PR advisory (v42 PRIVATE CANDIDATE)
+run-name: 'Stage 6 PR ${{ inputs.pr_number }} h-${{ inputs.head_sha }} b-${{ inputs.base_sha }} claim-${{ inputs.claim_nonce }}'
 
 # Do not install until the complete publication/security and exact-head review gates pass.
 # Manual-only. No schedule, source writes, dispatch to other workflows, or receipt acceptance.
@@ -16,6 +17,11 @@ on:
       base_sha:
         description: 'Exact 40-hex PR base SHA (must equal current branch tip)'
         required: true
+        type: string
+      claim_nonce:
+        description: 'Optional controller reservation correlation (manual fallback may leave blank)'
+        required: false
+        default: ''
         type: string
 
 permissions: {}
