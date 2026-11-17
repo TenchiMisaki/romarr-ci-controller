@@ -355,7 +355,7 @@ receipts, caller identity, native/fallback collisions, alert delivery and recove
 remain separate acceptance gates. No schedule, fallback, permissions or source
 execution was changed. Stage 5 operational acceptance remains IN PROGRESS.
 
-### Approved disabled storage/revision bootstrap — PARTIALLY CONFIGURED / ENFORCEMENT PENDING
+### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
 The owner explicitly approved the exact disabled bootstrap and additive
 protection scope on November 17, 2026. This approval persists; no repeat routine
@@ -376,17 +376,35 @@ Applicable classic protections and branch-rule enumeration remain NOT VERIFIED.
 | Revision protection | New active tag ruleset matching only `refs/tags/controller-revision-*`; block updates/deletions, no bypass actors | Independently read back actual settings and refusal behavior; future exceptional recovery remains a separate owner-controlled change |
 
 Approval covers only the listed disabled bootstrap and additive protections.
-The owner manually created revision-tag ruleset `27484547`. Independent REST
-readback confirms Active, exactly `refs/tags/controller-revision-*`, update and
-deletion restrictions, an empty bypass list and `current_user_can_bypass=never`.
-The ruleset list still contains only that ruleset and unchanged main ruleset
-`27344007`; the dedicated state-branch ruleset is NOT OBSERVED. This is
-configuration evidence, not an actual rejected-write test. No bootstrap ref was
-created by this work. The Work cloud-browser handoff failed before sign-in;
-the owner directed continued use of the connected GitHub tools instead.
-Ownership/admin permission and classic protections remain separate verification
-gaps. The connector still cannot write rulesets; no new authentication or
-credentials are requested for routine development. Configuration
+The owner manually created revision-tag ruleset `27484547` and state-branch
+ruleset `27485340`. Independent REST readback confirms both Active, exact
+`refs/tags/controller-revision-*` and `refs/heads/controller-state-v1` targets,
+respectively update/deletion and deletion/non-fast-forward restrictions, empty
+bypass lists and `current_user_can_bypass=never`. Existing main ruleset `27344007`
+is unchanged. Repository numeric identity and owner were reverified; the owner
+permission lookup returned `admin`. Classic protection collection returned 403
+`Resource not accessible by integration`; applicable-branch-rule enumeration was
+rejected by the connector allowlist. These are collection limits, not absent rules.
+
+Matching-ref collection returned an empty list before creation. The approved
+state branch was created once at `d2930189ec0aa9c59b1a2fdf108fe75892f9ad03`,
+with sole parent reviewed controller `8a98172685accf23e2a0e51d72bbc954237dc95a`.
+Independent readback confirmed sole-member tree
+`023ee9a1690d81c8a9344839c125c721e62d9702`, blob
+`36bf4390dd0ccb6d6cb82e279dd613440b454013`, 96 canonical bytes, SHA-256
+`4b7cf0033429ef787b37bb343498d4c163d761c1311ef510b759cfb36bd50983`.
+Policy remains disabled/generation 0, claims and alerts empty, last tick null.
+The production encoder/validator checked the initial state locally. Complete
+candidate/server trees and outgoing histories passed checksum-verified Gitleaks
+8.30.1 with the accepted positive control. No existing ref was replaced.
+
+The exact revision tag is still absent from matching-ref collection. The
+connector has no supported lightweight-tag creation tool; no release, branch-name
+workaround or credential extraction was attempted. Actual update/deletion/force
+refusals remain NOT TESTED, and configured protections do not certify enforcement.
+No destructive probes against real refs were attempted. The failed Work browser
+handoff is no longer the routine development path, as directed by the owner.
+Configuration
 readback alone is not enforcement acceptance. No credential deployment, actual
 trial approval record, source dispatch, scheduled caller, unattended activation
 or fallback retirement is bundled into this approval. After supported provisioning and readback,
@@ -445,7 +463,7 @@ remain preserved here; no private content or package is copied into this reposit
   state/dispatch/recovery acceptance path from merged `8a981726`. Local Git,
   read-only preflight, owner-trial binding and ordered full-source collection
   libraries are complete. The approved bootstrap/protection scope above
-  remains PARTIALLY CONFIGURED / ENFORCEMENT PENDING; do not repeat accepted tests or create another
+  remains REVISION TAG / ENFORCEMENT PENDING; do not repeat accepted tests or create another
   tracker. Preserve live acceptance gates and disabled unattended operation.
 
 ## Current Stage 6 continuation — November 16, 2026 (Pacific)
