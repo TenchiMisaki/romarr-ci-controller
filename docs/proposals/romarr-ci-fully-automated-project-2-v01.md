@@ -355,11 +355,13 @@ receipts, caller identity, native/fallback collisions, alert delivery and recove
 remain separate acceptance gates. No schedule, fallback, permissions or source
 execution was changed. Stage 5 operational acceptance remains IN PROGRESS.
 
-### Proposed disabled storage/revision bootstrap — OWNER DECISION PENDING
+### Approved disabled storage/revision bootstrap — ADMIN ACCESS PENDING
 
-The next proposed repository configuration is confined to this controller and
-is **NOT APPLIED**. It requires explicit approval for new repository-protection
-settings and a supported authenticated administrative publisher. The current
+The owner explicitly approved the exact disabled bootstrap and additive
+protection scope on November 17, 2026. This approval persists; no repeat routine
+approval is needed. The configuration is **APPROVED / NOT APPLIED** and remains
+blocked on a supported authenticated administrative publisher. Existing protections
+must be preserved; any additional security-sensitive scope requires separate approval. The current
 connection exposes repository reads and ordinary Git/PR writes, but no ruleset
 write capability; that is a tool boundary, not evidence that protection was set.
 A November 17 read verified existing ruleset `27344007` is active and covers only
@@ -373,9 +375,13 @@ Applicable classic protections and branch-rule enumeration remain NOT VERIFIED.
 | `refs/tags/controller-revision-8a98172685accf23e2a0e51d72bbc954237dc95a` | New lightweight tag pointing directly at the exact reviewed controller commit, only if absent | Reject an existing/moved/mismatched tag; identity alone is not immutability |
 | Revision protection | New active tag ruleset matching only `refs/tags/controller-revision-*`; block updates/deletions, no bypass actors | Independently read back actual settings and refusal behavior; future exceptional recovery remains a separate owner-controlled change |
 
-This proposal authorizes nothing by itself. No credential deployment, actual owner
-approval record, source dispatch, scheduled caller, unattended activation or
-fallback retirement is bundled into it. After supported provisioning and readback,
+Approval covers only the listed disabled bootstrap and additive protections.
+Administrative authentication is pending; no ruleset or ref has been created by
+this checkpoint. Ownership/admin permission, all existing protections and actual
+enforcement must be independently verified after authentication. Configuration
+readback alone is not enforcement acceptance. No credential deployment, actual
+trial approval record, source dispatch, scheduled caller, unattended activation
+or fallback retirement is bundled into this approval. After supported provisioning and readback,
 run the read-only prerequisite collector, then separately complete hosted mutation,
 owner-control, full-source producer/provenance/skip and failure/recovery acceptance.
 A valid initial state or protection write is not a completed operational handoff.
@@ -430,8 +436,8 @@ remain preserved here; no private content or package is copied into this reposit
 - Next: continue the existing hosted owner-control, complete-receipt,
   state/dispatch/recovery acceptance path from merged `8a981726`. Local Git,
   read-only preflight, owner-trial binding and ordered full-source collection
-  libraries are complete. The next concrete bootstrap/protection proposal above
-  remains OWNER DECISION PENDING; do not repeat accepted tests or create another
+  libraries are complete. The approved bootstrap/protection scope above
+  remains ADMIN ACCESS PENDING; do not repeat accepted tests or create another
   tracker. Preserve live acceptance gates and disabled unattended operation.
 
 ## Current Stage 6 continuation — November 16, 2026 (Pacific)
