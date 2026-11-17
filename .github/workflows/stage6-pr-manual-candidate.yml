@@ -38,6 +38,7 @@ jobs:
           sparse-checkout: |
             controller/stage6_pr_source_v42.py
             controller/stage6_pr_archive_v34.py
+            controller/stage6_pr_identity_v32.py
           sparse-checkout-cone-mode: false
       - name: Run pinned source in offline container
         shell: bash
