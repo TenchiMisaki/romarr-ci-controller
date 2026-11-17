@@ -583,6 +583,52 @@ justify changing permissions or repeat mutating attempts. Hosted storage race,
 simulated response loss, operational acceptance and real-ref refusal behavior
 remain NOT TESTED. Preserve this failed run and its summary as negative evidence.
 
+### Second installed canary attempt — LIVE EXERCISE BLOCKED / HISTORY RETAINED
+
+[Run #44173394592](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44173394592),
+attempt 1, used the correct full SHA and approval text, owner actor/triggering
+actor, main and installed revision `f09e7cf6`. It passed host/repository gates,
+created the run-owned canary and failed during RACE_AND_RECOVERY after 10.23s.
+The summary contains no exact error or writer outcomes. Do not infer an HTTP
+status, permission failure, loser count or recovery success from the broad phase.
+
+Retained ref `heads/controller-canary-44173394592-1` is at
+`6c0902b0a543ffcb5d9700e642a30df74ac4d116`, whose sole parent is seed
+`5ea6f74e2fff7e7e04855afce0298bfb3d47b989`, whose sole parent is installed
+main `f09e7cf6`. Independent REST/Git reads verify both canary commits use tree
+`023ee9a1690d81c8a9344839c125c721e62d9702` and the exact canonical 96-byte
+initial disabled state, SHA-256
+`4b7cf0033429ef787b37bb343498d4c163d761c1311ef510b759cfb36bd50983`.
+One child of the seed is observed; the complete eight-writer race or subsequent
+response-loss observation is NOT ESTABLISHED. Retain all objects and this ref.
+
+Artifact `14368726880`, `controller-state-canary-44173394592-1`, is bound to
+that exact run/repository/head. Independent download verifies 319 bytes,
+SHA-256 `2a5ac4f3d4bc106b17d5eb70f7f5b0349b6b35b8e3204e4fff84efa5d2f4bbab`,
+sole summary member, CRC and parsed BLOCKED_OR_UNCERTAIN / RACE_AND_RECOVERY /
+operational_acceptance NOT TESTED. Operational ref remains `d2930189`, revision
+tag `8a981726`; both rulesets remain Active with exact targets/restrictions and
+no bypass actors. No source dispatch, reset, force, deletion or repair was done.
+The approved live exercise has now been attempted; do not automatically repeat
+it. Another mutating run requires owner authorization after review.
+
+[Diagnostics PR #41](https://github.com/TenchiMisaki/romarr-ci-controller/pull/41)
+prepares head `7f98d5eb89595cdb448734a61c5c4019b8aee968`, tree
+`96a5c0fe4f9cf85909529baf8c4039726266f8e2`, based on `f09e7cf6`.
+It adds fixed subphases, at most eight allowlisted writer-failure records,
+method/status/fixed HTTP reason categories and race counts. Raw server/exception
+text, URLs and credentials are never exported. Non-conflict failures still block;
+no new HTTP response counts as a loser, no retry or extra permissions are added.
+Seventeen focused local tests, compilation, whitespace and exact candidate/server
+Gitleaks tree/history checks PASS.
+[CI #44174253423](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44174253423)
+passed **491 unittest cases / 3 Windows-only skips / 296 pytest cases**, compilation,
+artifact and read-only monitor steps. CI merge `db87c790` has exact tree
+`96a5c0fe` and parents `f09e7cf6` / `7f98d5eb`; its tree/history scans PASS.
+[Exact-head CodeRabbit review](https://github.com/TenchiMisaki/romarr-ci-controller/pull/41#issuecomment-6960733240)
+is PENDING. No additional live run has started.
+This addresses missing diagnostic evidence, not the unknown live failure cause.
+
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
 The owner explicitly approved the exact disabled bootstrap and additive
