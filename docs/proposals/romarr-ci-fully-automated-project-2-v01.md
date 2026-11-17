@@ -211,10 +211,11 @@ behavior and low-level trusted-host capability are preserved; only the new
 subclass adds this trial binding. No real owner approval, state/tag, credentials,
 workflow caller, source execution or unattended activation was provisioned.
 
-### Ordered full-source receipt collection — IN PROGRESS
+### Ordered full-source receipt collection — COMPLETE (dormant library increment)
 
-[PR #37](https://github.com/TenchiMisaki/romarr-ci-controller/pull/37) is OPEN /
-UNMERGED at corrected head `8fca04b4a0ecbc47bf381f5101cd9c3f112f9e60`, based on `f2842962`.
+[PR #37](https://github.com/TenchiMisaki/romarr-ci-controller/pull/37) is **MERGED**
+at `8a98172685accf23e2a0e51d72bbc954237dc95a`; corrected reviewed head
+`8fca04b4a0ecbc47bf381f5101cd9c3f112f9e60`, based on `f2842962`.
 The dormant collector enforces exact eligible PR/current-base, complete metadata,
 source recheck, bounded artifact download, envelope validation, independent
 execution provenance and final metadata/source read order. It accepts only
@@ -245,8 +246,13 @@ histories passed zero-finding scans.
 [Corrected CI #44139201775](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44139201775)
 passed **463 unittest cases / 3 Windows-only skips** and **296 pytest cases**,
 compilation/public-artifact/read-only checks. Its exact merge tree/parents and
-complete tree/history security scans passed. Corrected-head CodeRabbit remains
-IN PROGRESS; merge remains gated.
+complete tree/history security scans passed.
+[Final CodeRabbit assessment](https://github.com/TenchiMisaki/romarr-ci-controller/pull/37#issuecomment-6955705908)
+covers exact corrected head `8fca04b4`, with no actionable findings, no retained
+architecture concerns and the original thread resolved. Independent main/commit
+readback verifies merge `8a981726` has the exact tested/scanned tree and parents
+`f2842962` / `8fca04b4`. This completes dormant ordered collection, not accepted
+live full-source producer/execution evidence.
 
 The caller must independently approve the full-suite producer/workflow/job/steps
 and execution provenance. The existing focused advisory producer does not emit
@@ -364,7 +370,7 @@ Applicable classic protections and branch-rule enumeration remain NOT VERIFIED.
 | --- | --- | --- |
 | `refs/heads/controller-state-v1` | Create only if absent, with a sole canonical `state.json`: schema 1, policy disabled/generation 0, empty claims/alerts and null last tick | Never replace an existing ref or reset history; preserve exact initial commit/tree/blob and independent readback |
 | State protection | New active branch ruleset matching only `refs/heads/controller-state-v1`; deletion and non-fast-forward restrictions, no bypass actors | Existing default-branch ruleset remains separate; prove actual applicability and rejection behavior before operational acceptance |
-| `refs/tags/controller-revision-<approved-controller-SHA>` | New lightweight tag pointing directly at the exact reviewed controller commit, only if absent | Reject an existing/moved/mismatched tag; identity alone is not immutability |
+| `refs/tags/controller-revision-8a98172685accf23e2a0e51d72bbc954237dc95a` | New lightweight tag pointing directly at the exact reviewed controller commit, only if absent | Reject an existing/moved/mismatched tag; identity alone is not immutability |
 | Revision protection | New active tag ruleset matching only `refs/tags/controller-revision-*`; block updates/deletions, no bypass actors | Independently read back actual settings and refusal behavior; future exceptional recovery remains a separate owner-controlled change |
 
 This proposal authorizes nothing by itself. No credential deployment, actual owner
@@ -378,7 +384,7 @@ A valid initial state or protection write is not a completed operational handoff
 
 **Earlier post-PR #33 preflight — historical November 17 checkpoint:** the
 examined main was `485bb794d08fbded30ca80f5c735d3e3d9bcf2b7`; current verified
-main is `f2842962cf406affc7944bbc2b9e85e9050179a2` after PR #36. Independent authenticated GitHub
+main is `8a98172685accf23e2a0e51d72bbc954237dc95a` after PR #37. Independent authenticated GitHub
 reads returned 404 for the dedicated `controller-state-v1` branch and the exact
 `controller-revision-485bb794d08fbded30ca80f5c735d3e3d9bcf2b7` tag. The existing
 manual exact-PR advisory workflow is present at this revision. Real durable-backend
@@ -422,9 +428,11 @@ remain preserved here; no private content or package is copied into this reposit
   their prepared artifacts and supported isolated executors. No platform acceptance
   is inferred from controller integration or contract tests.
 - Next: continue the existing hosted owner-control, complete-receipt,
-  state/dispatch/recovery acceptance path from merged `f2842962`. Local Git
-  integration and the read-only prerequisite collector are complete; do not repeat its accepted tests or create a
-  redundant tracker. Keep live acceptance gates and unattended operation disabled.
+  state/dispatch/recovery acceptance path from merged `8a981726`. Local Git,
+  read-only preflight, owner-trial binding and ordered full-source collection
+  libraries are complete. The next concrete bootstrap/protection proposal above
+  remains OWNER DECISION PENDING; do not repeat accepted tests or create another
+  tracker. Preserve live acceptance gates and disabled unattended operation.
 
 ## Current Stage 6 continuation — November 16, 2026 (Pacific)
 
