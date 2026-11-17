@@ -240,3 +240,36 @@ The controller handles source-level CI and review evidence. Docker image/platfor
 Before continuing, review this backlog, [controller README](https://github.com/TenchiMisaki/romarr-ci-controller/blob/main/README.md), [VALIDATION.md](https://github.com/TenchiMisaki/romarr-ci-controller/blob/main/VALIDATION.md), applicable repository `AGENTS.md`, and current source, GitHub Actions jobs and CodeRabbit reviews. Reconcile the controller's current `main` revision, relevant fork branches, target PR head/base SHAs and claim/run identities. Previous green tests belong to their exact revisions, not a later moving head.
 
 **Resume from the Current Stage 6 review section above: PR #30 exact-head review and then separately controlled manual exact-PR hosted acceptance.** Do not repeat accepted source tests, confuse read-only workflow successes with hosted source acceptance, merge the review PR, or silently enable privileged automation. Stop only at the real security, owner-controlled GitHub, upstream or production boundaries.
+
+## Approved scope expansion — cross-platform evidence verification (November 16, 2026)
+
+**Owner request:** Include the following ten capabilities in the scope of Fully Automated Project 2 **now**. They are an authorized engineering backlog and acceptance-design expansion, not evidence that the capabilities are built, tested, activated, or accepted. Preserve all existing Stage 1–8 requirements, milestones and acceptance gates. Continue current Stage 6–8 critical-path implementation without interrupting Work, invalidating completed evidence, or changing the definition of the existing hosted automation acceptance. Implement these as separately reviewed, bounded increments as dependencies allow; no requirement to run all platforms for every source change.
+
+### Cross-platform workstream requirements (CP-01–CP-10)
+
+| ID | Priority | Capability and minimum acceptance direction |
+| --- | --- | --- |
+| CP-01 | 1 | **Docker image runtime smoke:** Isolated candidate-image startup; bounded readiness/health checks, dependencies, runtime permissions and independently verified build identity. Include browser-enabled image variant when supported. Distinguish image build, startup, health and test failures. |
+| CP-02 | 2 | **Windows compatibility matrix:** Windows Python 3.11 and 3.13 supported application tests, including loopback/authentication/persistence paths where applicable; retain per-version outcomes and exact inputs. |
+| CP-03 | 3 | **Packaged build provenance:** Independently correlate running Docker image/native executable repository, full source commit, build type, workflow, immutable artifact/digest and actual execution; reject missing, foreign, stale and contradictory identities. |
+| CP-04 | 4 | **Multi-platform receipts:** Versioned, explicitly typed source/Docker/Windows/native-executable/future Android receipt schemas, each bound to immutable source and controller revisions, workflow/run/attempt/job and test scope. Platform acceptance must remain independent; missing results are NOT TESTED/NOT CONFIGURED, never PASS. |
+| CP-05 | 5 | **Real Windows executable smoke:** Launch the actual candidate executable in a properly isolated Windows environment and verify startup, expected behavior and build provenance; do not mistake packaging success for runtime acceptance. |
+| CP-06 | 6 | **Platform toolchain preflights:** Verify actual available interpreters, archive tools, containers, dependencies, permissions and versions per suite; fail closed on unsupported or missing prerequisites instead of reporting an application test failure. |
+| CP-07 | 7 | **Release-readiness aggregation:** Summarize independently verified source, image, Windows, executable and optional mobile results for one exact revision, without inferring release approval or automatically publishing/merging. Required/optional platforms and skip policy are explicit and versioned. |
+| CP-08 | 8 | **Artifact allowlist parity:** Strict schema/file allowlists, bounded size and content verification, deterministic manifests/digests and negative secret/privacy-leakage tests for each applicable workflow; no raw logs/secrets or overly permissive fallbacks. |
+| CP-09 | 9 | **Runtime dependency validation:** Confirm required archive executables, plugins, imports and permissions within tested images/binaries; distinguish missing environment dependencies from application behavior defects. |
+| CP-10 | 10 | **Cross-platform failure classification:** Record build, environment/preflight, startup, assertion/test, evidence-collection, provenance, freshness, skipped, incomplete and unsupported states separately, with actionable but sanitized diagnostics. |
+
+### Development order and integration boundaries
+
+1. **Preserve Stage 6 critical path**: durable hosted claims, authenticated owner arm/disarm, unique run identity, uncertain-dispatch recovery and the existing manual/advisory-only boundary. Do not introduce unattended execution, new GitHub permissions, automatic retries or claim deletion through this scope update.
+2. **Begin CP design and isolated advisory increments** alongside safe work when dependencies and review capacity permit: prioritize CP-01 + CP-03 Docker/provenance, CP-02 Windows, and CP-04 independent receipts, then CP-05–CP-10. Reuse established source identity, JUnit, manifest, sanitizer, artifact transport, run/job/step and CodeRabbit evidence mechanisms; avoid duplicating maintainer CI.
+3. **Keep maintainer build ownership**: ROMarr's own workflows build/publish release images, Windows installers and future mobile artifacts. Controller may trigger only separately accepted test workflows and independently verify their outputs; it must not take ownership of release publishing or modify upstream CI by implication.
+4. **Stage 7–8 integration**: Add advisory-only cross-platform status, alert/risk classification and release-readiness reporting after evidence integrity gates. The new platform checks must not silently become prerequisites for the *existing* Stage 6–8 operational handoff or retroactively invalidate completed acceptance.
+5. **Separate activation/acceptance**: Each new workflow needs exact-source provenance, isolated runner/permissions, privacy and secrets pre-publication review, negative tests, exact-head CI and CodeRabbit where required, recovery and owner acceptance before unattended use. No automatic remediation, upstream PR creation/merge, production deployment or manual-fallback retirement.
+
+### Initial interoperability and acceptance baseline
+
+The controller's `controller/public_evidence.py` already recognizes official ROMarr's three-member `summary.json`, `cases.json`, `manifest.json` evidence ZIP schema. This is **artifact self-consistency validation only**; source freshness, run identity, workflow/job outcomes, acceptance of platform-specific claims and operational reliability remain separate gates. Extend schemas conservatively and version them rather than interpreting existing source-only artifacts as Docker/Windows/native-executable acceptance.
+
+**Status on scope entry:** CP-01–CP-10 = APPROVED FOR PLANNING / NOT IMPLEMENTED OR ACCEPTED BY THIS BACKLOG UPDATE. Stage 6–8 implementation and operational acceptance remain in progress. This section records owner-requested scope, not a test or publication claim.
