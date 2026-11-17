@@ -1,10 +1,11 @@
-# Manual hosted state canary — inert candidate
+# Manual hosted state canary — owner-approved manual workflow
 
-This prepares the next Stage 6 hosted storage acceptance step. The workflow is
-stored at `docs/proposals/hosted-state-canary.workflow.yml`, not under
-`.github/workflows`; no GitHub workflow, credential, scheduler or caller is
-installed. Moving it into the workflow directory and manually running it require
-separate owner acceptance of the concrete repository-write scope below.
+The owner approved installation and one manual run on November 17, 2026
+(Pacific), after the exact PR #39 review. The workflow is installed at
+`.github/workflows/controller-state-canary.yml`. It has no scheduled or automatic
+trigger. This approval covers the concrete repository-write scope below, not
+operational controller activation or unattended source testing. A merged workflow
+is not evidence that its manual run or live acceptance succeeded.
 
 ## Proposed scope
 
