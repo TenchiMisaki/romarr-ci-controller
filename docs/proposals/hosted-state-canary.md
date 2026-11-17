@@ -41,6 +41,18 @@ response-loss evidence, not a naturally observed network failure or separate
 process restart. Source dispatch is impossible through the adapter. The report
 contains only fixed status codes, public run-owned ref/commit IDs and counts.
 
+## Bounded failure evidence
+
+A blocked run reports a fixed phase and allowlisted error category, with HTTP
+method/status and a fixed reason category where available. It never publishes
+raw server responses, exception text, URLs or credentials. Race observations
+retain at most eight writer failures, counts of successes/explicit conflicts and
+created commit count. Every non-conflict writer failure blocks completion; this
+instrumentation adds no retry and accepts no additional conflict response.
+The original uncertain retained canary branch is preserved. Another live attempt
+requires owner authorization; code review/CI is not evidence of a repaired live
+race or a successful response-loss observation.
+
 ## Acceptance and recovery
 
 Local tests use actual disposable bare Git repositories behind modeled HTTP.

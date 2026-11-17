@@ -36,6 +36,43 @@ class SimulatedResponseLoss(Exception):
     """Only the deliberate post-success injection, never a transport timeout."""
 
 
+class CanaryHTTPFailure(StateBlocked):
+    """Bounded public HTTP metadata; never retain a response body or URL."""
+    def __init__(self, status, method, reason):
+        if (type(status) is not int or not 100 <= status <= 599
+                or method not in {'GET', 'POST', 'PATCH'}
+                or reason not in {'REFERENCE_UPDATE_FAILED', 'OTHER_RESPONSE'}):
+            raise StateBlocked('CANARY_DIAGNOSTIC_INVALID')
+        super().__init__('CANARY_API_REQUEST_REJECTED')
+        self.status, self.method, self.reason = status, method, reason
+
+
+SAFE_FAILURE_CODES = frozenset({
+    'STATE_LEASE_CHANGED', 'STATE_CHANGED_DURING_READ',
+    'STATE_WRITE_READBACK_UNCERTAIN', 'CANARY_API_REQUEST_REJECTED',
+    'CANARY_RACE_NOT_EXCLUSIVE', 'CANARY_WINNER_READBACK_INVALID',
+    'CANARY_RESTART_READBACK_INVALID', 'CANARY_RESPONSE_LOSS_NOT_INJECTED',
+    'CANARY_RACE_WRITER_FAILED', 'CANARY_HOST_OR_AUTHORIZATION_INVALID',
+    'CANARY_REPOSITORY_IDENTITY_INVALID', 'CANARY_EXISTING_REF_PRESERVED',
+})
+
+
+def failure_evidence(error):
+    """Fixed categories/allowlisted codes only; exception text stays private."""
+    if isinstance(error, CanaryHTTPFailure):
+        return dict(category='HTTP_REJECTED', status=error.status,
+                    method=error.method, reason=error.reason)
+    if isinstance(error, StateBlocked):
+        code = str(error)
+        return dict(category='STATE_BLOCKED',
+                    code=code if code in SAFE_FAILURE_CODES else 'UNCLASSIFIED_STATE_BLOCK')
+    if isinstance(error, TimeoutError):
+        return dict(category='TRANSPORT_TIMEOUT')
+    if isinstance(error, OSError):
+        return dict(category='TRANSPORT_OR_IO_ERROR')
+    return dict(category='UNEXPECTED_EXCEPTION')
+
+
 def context(env):
     """Require owner-initiated, exact-revision GitHub-hosted manual execution."""
     if (env.get('GITHUB_REPOSITORY') != 'TenchiMisaki/romarr-ci-controller'
@@ -148,33 +185,46 @@ class CanaryAPI:
         return GitHubState(self).load()[0]
 
 
-def exercise(api):
+def exercise(api, progress=None):
     """Race eight identical disabled states, then simulate a lost successful PATCH.
 
     The loss injection occurs only after a successful real transport response;
     it is not a claim of a naturally occurring provider/network failure.
     """
+    progress = {} if progress is None else progress
+    progress['phase'] = 'RACE_INITIAL_READ'
     parent, state = GitHubState(api).load()
     if state != initial_state():
         raise StateBlocked('CANARY_NOT_INITIAL_DISABLED')
     api.created.clear()
     api.barrier = threading.Barrier(8)
+    progress['phase'] = 'RACE_WRITERS'
     def writer(_):
         try:
-            return GitHubState(api).save(parent, initial_state())
+            return ('winner', GitHubState(api).save(parent, initial_state()))
         except CanaryConflict:
-            return None
+            return ('conflict', None)
+        except Exception as error:
+            return ('error', failure_evidence(error))
     try:
         with ThreadPoolExecutor(max_workers=8) as pool:
             results = list(pool.map(writer, range(8)))
     finally:
         api.barrier = None
-    winners = [x for x in results if x is not None]
+    winners = [value for kind, value in results if kind == 'winner']
+    failures = [value for kind, value in results if kind == 'error']
+    progress.update(phase='RACE_VALIDATE', writers=8, successes=len(winners),
+                    conflicts=sum(kind == 'conflict' for kind, _ in results),
+                    created_commits=len(api.created), writer_failures=failures)
+    if failures:
+        raise StateBlocked('CANARY_RACE_WRITER_FAILED')
     if len(winners) != 1 or len(api.created) != 8:
         raise StateBlocked('CANARY_RACE_NOT_EXCLUSIVE')
+    progress['phase'] = 'WINNER_READBACK'
     winner, observed = GitHubState(api).load()
     if winner != winners[0] or observed != initial_state():
         raise StateBlocked('CANARY_WINNER_READBACK_INVALID')
+    progress['phase'] = 'RESPONSE_LOSS_WRITE'
     api.drop_response = True
     try:
         GitHubState(api).save(winner, initial_state())
@@ -182,6 +232,7 @@ def exercise(api):
         pass
     else:
         raise StateBlocked('CANARY_RESPONSE_LOSS_NOT_INJECTED')
+    progress['phase'] = 'RESPONSE_LOSS_READBACK'
     final, observed = GitHubState(CanaryAPI(api.wire, api.ref)).load()
     commit = api.request('GET', PREFIX+'git/commits/'+final)
     if final == winner or observed != initial_state() or [p.get('sha') for p in commit['parents']] != [winner]:
@@ -219,7 +270,9 @@ class Wire:
             if (method=='PATCH' and code==422 and type(payload) is dict
                     and payload.get('message')=='Update is not a fast forward'):
                 raise CanaryConflict('CANARY_NON_FAST_FORWARD_REJECTED') from None
-            raise StateBlocked('CANARY_API_REQUEST_REJECTED') from None
+            reason = ('REFERENCE_UPDATE_FAILED' if type(payload) is dict
+                      and payload.get('message') == 'Reference update failed' else 'OTHER_RESPONSE')
+            raise CanaryHTTPFailure(code, method, reason) from None
 
 
 def main():
@@ -249,16 +302,17 @@ def main():
         api.seed(os.environ['GITHUB_SHA'])
         report['phase']='RACE_AND_RECOVERY'
         print('VERIFY: eight-writer race and simulated lost-response readback',flush=True)
-        report=exercise(api)
+        report.update(exercise(api, report))
         report['state']='BLOCKED_OR_UNCERTAIN'
         report['phase']='OPERATIONAL_READBACK'
         if api._call('GET','git/ref/'+STATE_REF)!=operational:
             report['state']='OPERATIONAL_STATE_CHANGED_DURING_OBSERVATION'
         else:
             report['state']='CANARY_OBSERVATIONS_PASS'
-    except Exception:
+    except Exception as error:
         # Preserve uncertain refs/history; never retry, repair or emit raw errors.
         report['state']='BLOCKED_OR_UNCERTAIN'
+        report['failure']=failure_evidence(error)
     try:
         output=Path(os.environ['RUNNER_TEMP'])/'controller-canary-summary.json'
         with output.open('x') as stream:stream.write(json.dumps(report,sort_keys=True)+'\n')
