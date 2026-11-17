@@ -224,6 +224,41 @@ class CanaryTests(unittest.TestCase):
             self.assertNotIn('sensitive fixture phrase',json.dumps(result))
         self.assertEqual(response_fingerprint(b'x'*2_000_001)['shape'],'OVERSIZED_RESPONSE')
 
+    def test_deep_json_retains_known_http_status_and_capture_digest(self):
+        import hashlib
+        raw=b'['*10000+b'0'+b']'*10000
+        self.assertEqual(response_fingerprint(raw)['shape'],'MALFORMED_JSON')
+        class Opener:
+            def open(self,req,timeout):
+                raise HTTPError(req.full_url,422,'private',{},io.BytesIO(raw))
+        with patch('hosted_state_canary.build_opener',return_value=Opener()):
+            with self.assertRaises(CanaryHTTPFailure) as caught:
+                Wire('synthetic-fixture')('PATCH',PREFIX+'git/refs/'+REF,dict(sha='a'*40,force=False))
+        result=failure_evidence(caught.exception)
+        self.assertEqual(result['status'],422)
+        self.assertEqual(result['response']['captured_sha256'],hashlib.sha256(raw).hexdigest())
+        self.assertEqual(result['response']['shape'],'MALFORMED_JSON')
+
+    def test_incomplete_error_body_is_closed_bounded_and_never_a_conflict(self):
+        from http.client import IncompleteRead
+        for partial in (json.dumps(dict(message='Update is not a fast forward')).encode(),
+                        b'x'*2_000_100):
+            class BrokenBody(io.BytesIO):
+                def read(self,*args):raise IncompleteRead(partial,1)
+            body=BrokenBody()
+            class Opener:
+                def open(self,req,timeout):
+                    raise HTTPError(req.full_url,422,'private',{},body)
+            with patch('hosted_state_canary.build_opener',return_value=Opener()):
+                with self.assertRaises(CanaryHTTPFailure) as caught:
+                    Wire('synthetic-fixture')('PATCH',PREFIX+'git/refs/'+REF,dict(sha='a'*40,force=False))
+            result=failure_evidence(caught.exception)
+            self.assertTrue(body.closed)
+            self.assertEqual(result['status'],422)
+            self.assertEqual(result['response']['body_read'],'INCOMPLETE')
+            self.assertLessEqual(result['response']['captured_bytes'],2_000_001)
+            self.assertNotIsInstance(caught.exception,CanaryConflict)
+
     def test_existing_canary_is_never_reinitialized(self):
         self.api.seed(self.controller);before=len(self.wire.calls)
         head=self.wire.git.head()

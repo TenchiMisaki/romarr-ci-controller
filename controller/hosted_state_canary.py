@@ -10,6 +10,7 @@ import base64
 from concurrent.futures import ThreadPoolExecutor
 import datetime
 import hashlib
+from http.client import IncompleteRead
 import json
 import os
 from pathlib import Path
@@ -60,7 +61,7 @@ def response_fingerprint(raw):
         return dict(result,shape='OVERSIZED_RESPONSE')
     try:
         payload=json.loads(raw)
-    except (ValueError,UnicodeError):
+    except (ValueError,UnicodeError,RecursionError):
         return dict(result,shape='MALFORMED_JSON')
     if type(payload) is not dict:
         return dict(result,shape='NON_OBJECT_JSON')
@@ -84,7 +85,7 @@ class CanaryHTTPFailure(StateBlocked):
         if (type(status) is not int or not 100 <= status <= 599
                 or method not in {'GET', 'POST', 'PATCH'}
                 or reason not in {'REFERENCE_UPDATE_FAILED', 'OTHER_RESPONSE'}
-                or body_read not in {'SUCCESS','TIMEOUT','IO_ERROR'}
+                or body_read not in {'SUCCESS','TIMEOUT','IO_ERROR','INCOMPLETE'}
                 or encoding not in {'identity','gzip','br','deflate','OTHER'}):
             raise StateBlocked('CANARY_DIAGNOSTIC_INVALID')
         super().__init__('CANARY_API_REQUEST_REJECTED')
@@ -314,14 +315,29 @@ class Wire:
         except HTTPError as error:
             code=error.code
             body_read='SUCCESS'
-            encoding=(error.headers or {}).get('Content-Encoding','identity').lower()
-            if encoding not in {'identity','gzip','br','deflate'}:encoding='OTHER'
-            try: raw_error=error.read(MAX_RESPONSE+1)
-            except TimeoutError: raw_error=b'';body_read='TIMEOUT'
-            except OSError: raw_error=b'';body_read='IO_ERROR'
-            try: payload=json.loads(raw_error)
-            except (ValueError, UnicodeError): payload={}
-            error.close()
+            try:
+                encoding=(error.headers or {}).get('Content-Encoding','identity').lower()
+                if encoding not in {'identity','gzip','br','deflate'}:
+                    encoding='OTHER'
+                try:
+                    raw_error=error.read(MAX_RESPONSE+1)
+                except IncompleteRead as incomplete:
+                    raw_error=(incomplete.partial[:MAX_RESPONSE+1]
+                               if type(incomplete.partial) is bytes else b'')
+                    body_read='INCOMPLETE'
+                except TimeoutError:
+                    raw_error=b''
+                    body_read='TIMEOUT'
+                except OSError:
+                    raw_error=b''
+                    body_read='IO_ERROR'
+            finally:
+                error.close()
+            try:
+                payload=(json.loads(raw_error) if body_read=='SUCCESS'
+                         and len(raw_error)<=MAX_RESPONSE else {})
+            except (ValueError, UnicodeError, RecursionError):
+                payload={}
             if (method=='PATCH' and code==422 and type(payload) is dict
                     and payload.get('message')=='Update is not a fast forward'):
                 raise CanaryConflict('CANARY_NON_FAST_FORWARD_REJECTED') from None
