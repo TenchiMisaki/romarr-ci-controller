@@ -774,6 +774,70 @@ validation run also needs owner authorization. Existing implementation tests,
 privacy scans, exact-head CI/review and recovery gates remain required. Independent
 preparation and review may continue while those acceptance boundaries remain blocked.
 
+### Verified-sibling criterion proposal — PR #43 OPEN / NOT INSTALLED
+
+[PR #43](https://github.com/TenchiMisaki/romarr-ci-controller/pull/43) proposes
+replacing reliance on a specific rejection message with independent candidate
+structure/readback evidence for the manual canary only. It is based on installed
+main `3238861da233c43dff45a98cbf04be156eda68f9`; proposed head
+`8b9397da01e88e5e24d15fd85a4d703603358690`, tree
+`b9d4bcccce1742225404f21b3baf497ea71c9cc4`.
+
+Every rejected PATCH is bound to its validated target. Eight unique targets must
+exactly cover created commits/outcomes, with one winner. Independent GETs require
+matching commit identities, exact canonical disabled-state tree and one sole
+seed parent on every candidate; fresh winner/state readback must match. Only a
+complete identity-encoded PATCH 422 with exact generic message qualifies for the
+separate generic-reference-rejected category. It is never reported as an explicit
+non-fast-forward conflict. Unknown HTTP errors, incomplete/encoded bodies,
+foreign/duplicate/missing candidates, invalid trees/parents and changed refs
+remain blocked before recovery writes. The existing single simulated-response-loss
+child-write/readback remains bounded; no retry or real network-loss claim is added.
+
+Online research used GitHub's official REST refs and API best-practices documents,
+GraphQL commits reference (`expectedHeadOid`), and Grafana's own commit-action
+source. GitHub recommends serial normal requests; this deliberate canary race
+is a scoped test. GraphQL expected-head semantics are a separate backend design
+alternative, not a dependency or migration in PR #43. Source links and the precise
+proposed criterion/recovery boundary are retained in
+`docs/proposals/canary-sibling-criterion.md` on the proposal branch. No third-party
+code was copied and no additional credential or administrative access is requested.
+
+**Verification:** 29 focused local unittest cases PASS; compilation/diff checks
+PASS. A local full-suite attempt was blocked by missing pytest in the selected
+interpreter, including dependent pytest-child/JUnit checks, and is not reported
+as PASS. [Hosted CI #44184039443](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44184039443)
+passed **503 unittest cases / 3 Windows-only skips / 296 pytest cases**, compilation,
+artifact action and read-only monitor checks. Actual CI merge
+`9490bf125c91d6a1f4c2f94cabfd15e0b8d5203b` independently matches candidate tree
+`b9d4bccc` and ordered parents `3238861d` / `8b9397da`. Candidate, exact server and
+actual CI-merge tree/outgoing-history Gitleaks checks PASS, each with detected
+positive control. Initial CodeRabbit review identified a valid short-response edge case: sized
+HTTP reads can return fewer bytes than declared without raising IncompleteRead.
+Correction head `9be1c4c6d355293a38180de7981c48ac738a7ea1`, tree
+`a6b228d6e9104be859446eed3039a7f504407035`, rejects mismatched/malformed declared
+Content-Length before classifying complete evidence. A real CPython HTTPResponse
+regression reproduces the truncation; matching/invalid/overlong-length controls
+also pass. **31 focused tests PASS**, corrected compilation/diff checks and
+candidate/server tree/history security scans PASS. The original finding thread
+`PRRT_kwDOVufN-c64rFbS` is resolved with independently verified regression evidence.
+[Corrected CI #44185209296](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44185209296)
+passed **505 unittest cases / 3 Windows-only skips / 296 pytest cases** and all
+compilation/artifact/read-only monitor checks. Actual CI merge
+`c339ad43d48e5e08cd1e4a95495b097d741d3780` has corrected tree `a6b228d6` and ordered
+parents `3238861d` / `9be1c4c6`; exact tree/history scans PASS. Corrected exact-head
+CodeRabbit review remains PENDING.
+
+**Approval boundary:** this intentionally changes manual-canary acceptance, so
+PR #43 remains OPEN / UNMERGED pending explicit owner approval after completed
+review. Do not install automatically or retroactively relabel run #44181621002
+as PASS. Proposed live behavior and operational acceptance remain NOT TESTED.
+One further bounded manual live validation also needs owner authorization.
+No additional canary run, source dispatch, unattended activation, operational-state
+write, ruleset change, force/delete/reset, or fork-sync modification occurred.
+Current main and the disabled operational state remain unchanged. Existing
+publication/review requirements and retained canary recovery history remain.
+
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
 The owner explicitly approved the exact disabled bootstrap and additive
