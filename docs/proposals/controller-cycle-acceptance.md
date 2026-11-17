@@ -127,6 +127,30 @@ sustained cadence, missed/failed-run alerts, interruption and retention recovery
 Then obtain separate owner authorization for one bounded unattended trial and
 explicit primary-method acceptance. Preserve the independent manual fallback.
 
+### Read-only deployment preflight
+
+`deployment_preflight.inspect_deployment` checks the fixed numeric repository and
+owner identities, public/nonarchived repository state, the exact lightweight
+controller-revision tag, and the existing canonical Git-backed state through the
+reviewed parser. It re-reads repository/tag identity after state collection and
+blocks on an already-enabled policy. Its wrapper refuses mutations even if a
+caller accidentally supplies a write-capable adapter. It never provisions,
+initializes, resets, arms, disarms, dispatches or loads credentials.
+
+Reports contain fixed status codes and opaque commit identities/counts, never raw
+state claims, tokens, exceptions or API payloads. A GET 404 is reported as
+`NOT_FOUND_OR_NOT_VISIBLE`, not proof that a resource is absent; authentication,
+transport and collection failures remain distinct from invalid content. An
+independent state read can continue after an unavailable tag, but a repository
+identity failure blocks all dependent reads.
+
+`prerequisites=PASS` means only these point-in-time observations passed.
+`operational_acceptance=NOT TESTED`, `activation_allowed=false` and
+`dispatch_allowed=false` remain explicit for every result. Tag identity is not
+ref-protection evidence. No owner authorization, credential isolation, live
+concurrency/recovery, full-suite receipt or notification acceptance is inferred.
+The collector is a dormant library, not an installed entrypoint or workflow.
+
 ## Recovery
 
 Read the exact stored claim and authenticated run/receipt evidence. Preserve
