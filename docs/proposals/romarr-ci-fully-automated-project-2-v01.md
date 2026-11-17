@@ -481,15 +481,58 @@ PR #39 merged at `68969a12e6968b58cb38e9490becda2bf359a16e`; independent
 Git and REST readback verifies exact tested/scanned tree `a3910e2f` and parents
 `cd320e3f` / `01a1541d`. The workflow remains INERT under `docs/proposals`.
 
-The separately controlled next decision is installation and one owner-triggered
-manual run of this concrete canary. Its ephemeral job token needs repository
-contents-write permission, broader than a provider-side per-ref grant; the
-application allowlist is not a substitute for that permission boundary.
-A live run creates and retains one new canary branch plus append-only commits;
-no production-state/tag, protection, source execution, unattended policy or manual
-fallback change is included. This additional privileged execution is not bundled
-into the previous disabled bootstrap or website prerelease approval. Operational
-acceptance and actual real-ref protection refusals remain NOT TESTED.
+The owner explicitly APPROVED installation and one manual run of the reviewed
+canary on November 17, 2026 (Pacific). Approval covers its ephemeral job token
+with repository contents-write permission, broader than a provider-side per-ref
+grant; the application allowlist is not a provider permission boundary. It
+permits one new retained run-owned canary branch and append-only disabled-state
+commits, not operational-state/tag/protection changes, source execution,
+unattended policy, fallback retirement or repeat mutating attempts.
+
+### Manual canary installation — PR #40
+
+[PR #40](https://github.com/TenchiMisaki/romarr-ci-controller/pull/40) prepares
+head `574585475d9d5178f98b9b6af81f0a8ac514d2f8`, tree
+`98c63fff9428353e80e97dd99697fa49f2263f91`, on base `68969a12`.
+It moves the exact executor workflow proposal to
+`.github/workflows/controller-state-canary.yml` (only its status comment changes),
+adds that workflow path to the controller CI trigger, and updates the proposal's
+approval/install status. The Python executor is unchanged. Thirteen focused
+local tests PASS: ten reviewed executor cases plus three workflow contract cases
+with negative controls for automatic events, source input, expanded permissions,
+persisted credentials, command/artifact drift and owner gates. Compilation,
+whitespace and exact candidate/server Gitleaks tree/history checks PASS.
+[CI #44168577515](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44168577515)
+passed **487 unittest cases / 3 Windows-only skips / 296 pytest cases**, compilation,
+public-artifact and read-only monitor steps. Actual CI checkout
+`effd6ba75d8536d8af367b0aa79edd4b8e99622d` has exact tree `98c63fff` and parents
+`68969a12` / `57458547`; tree/history security scans PASS.
+[Automatic CodeRabbit review](https://github.com/TenchiMisaki/romarr-ci-controller/pull/40#issuecomment-6959915173)
+found one valid test-guard gap: custom shell templates at step, job-default or
+workflow-default scope could bypass the approved run command without failing the
+validator. Correction head `bf089435dcc83d79a9b2a0733d04b1f7fd143987`, tree
+`3a025d500274a3c14228c36dd10d11ee064b92f9`, rejects shell keys and workflow/job
+defaults and adds all three negative controls. All 13 focused local tests,
+compilation, whitespace and exact candidate/server tree/history Gitleaks checks
+PASS. [Corrected CI #44169577023](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44169577023)
+passed **487 unittest cases / 3 Windows-only skips / 296 pytest cases** and all
+compilation/artifact/read-only monitor steps. CI merge `50d2c2ab` has exact tree
+`3a025d50` and parents `68969a12` / `bf089435`; its tree/history scans PASS.
+[Incremental review request](https://github.com/TenchiMisaki/romarr-ci-controller/pull/40#issuecomment-6960062561)
+is PENDING. The installed-workflow
+candidate and executor bytes are unchanged; no live canary has run.
+
+Pre-run independent reads reconfirm operational state ref `d2930189`, revision
+tag `8a981726`, and unchanged Active state/revision rulesets with exact targets,
+required restrictions and no bypass actors. These are configuration/ref checks,
+not actual refused-update/deletion behavior.
+
+The connector has no workflow-dispatch capability and local GitHub CLI is not
+authenticated. After review/installation readback, the owner must initiate the
+one approved run from the official GitHub website on `main`, with the exact
+installed main SHA and `CREATE_RETAINED_CANARY_ONLY` input. Do not request or
+handle credentials in chat. No live canary has run; hosted observations,
+operational acceptance and actual real-ref protection refusals remain NOT TESTED.
 
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
