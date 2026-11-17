@@ -1,0 +1,160 @@
+name: ROMarr Stage 6 - Manual exact PR advisory (v42 PRIVATE CANDIDATE)
+
+# Do not install until the complete publication/security and exact-head review gates pass.
+# Manual-only. No schedule, source writes, dispatch to other workflows, or receipt acceptance.
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Existing non-draft personal-fork PR number'
+        required: true
+        type: string
+      head_sha:
+        description: 'Exact 40-hex PR head SHA (verify independently)'
+        required: true
+        type: string
+      base_sha:
+        description: 'Exact 40-hex PR base SHA (must equal current branch tip)'
+        required: true
+        type: string
+
+permissions: {}
+concurrency:
+  group: stage6-pr-advisory-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  isolated_source:
+    name: Isolated exact-PR ROMarr source tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions: {}
+    steps:
+      - name: Checkout trusted controller sanitizer without saved credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            controller/stage6_pr_source_v42.py
+            controller/stage6_pr_archive_v34.py
+          sparse-checkout-cone-mode: false
+      - name: Run pinned source in offline container
+        shell: bash
+        env:
+          EXPECTED_PR_HEAD_SHA: ${{ inputs.head_sha }}
+          EXPECTED_PR_BASE_SHA: ${{ inputs.base_sha }}
+        run: |
+          set -euo pipefail
+          umask 077
+          if [[ ! "$EXPECTED_PR_HEAD_SHA" =~ ^[a-f0-9]{40}$ || ! "$EXPECTED_PR_BASE_SHA" =~ ^[a-f0-9]{40}$ ]]; then
+            echo 'BLOCKED: invalid immutable source identity' >&2
+            exit 1
+          fi
+          if [[ -z "${RUNNER_TEMP:-}" || ! -d "$RUNNER_TEMP" ]]; then
+            echo 'BLOCKED: temporary directory unavailable' >&2
+            exit 1
+          fi
+          source_dir="$(mktemp -d "${RUNNER_TEMP}/stage6-source.XXXXXXXX")"
+          result_dir="$(mktemp -d "${RUNNER_TEMP}/stage6-result.XXXXXXXX")"
+          build_dir="$(mktemp -d "${RUNNER_TEMP}/stage6-image.XXXXXXXX")"
+          image="stage6-pr-advisory-${GITHUB_RUN_ID}"
+          cleanup() {
+            docker image rm "$image" >/dev/null 2>&1 || true
+            rm -rf -- "$source_dir" "$result_dir" "$build_dir"
+          }
+          trap cleanup EXIT
+          git init -q "$source_dir"
+          git -C "$source_dir" remote add origin https://github.com/TenchiMisaki/romarr.git
+          timeout 75s git -C "$source_dir" -c protocol.version=2 fetch --quiet --no-tags --depth=1 origin "$EXPECTED_PR_HEAD_SHA"
+          git -C "$source_dir" checkout -q --detach FETCH_HEAD
+          if [[ "$(git -C "$source_dir" rev-parse --verify HEAD)" != "$EXPECTED_PR_HEAD_SHA" ]]; then
+            echo 'BLOCKED: exact source commit changed' >&2
+            exit 1
+          fi
+          if ! source_status="$(git -C "$source_dir" status --porcelain --untracked-files=all)" || [[ -n "$source_status" ]]; then
+            echo 'BLOCKED: source worktree unverified' >&2
+            exit 1
+          fi
+          if [[ ! -f "$source_dir/tests/test_wired.py" || ! -f "$source_dir/pytest.ini" ]]; then
+            echo 'BLOCKED: required test inputs absent' >&2
+            exit 1
+          fi
+          cat > "$build_dir/Dockerfile" <<'DOCKERFILE'
+          FROM --platform=linux/amd64 python:3.13.18-slim@sha256:aaf08c5490d52cd92bc27142a5215b1e47355a5eaf9adfad2a0fbc022d0b5490
+          RUN python -m pip install --no-cache-dir 'pytest==9.2.0'
+          WORKDIR /src
+          DOCKERFILE
+          timeout 240s docker build --quiet --pull --platform linux/amd64 --tag "$image" "$build_dir" >/dev/null
+          set +e
+          timeout 300s docker run --rm --platform linux/amd64 --network none --read-only \
+            --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 \
+            --memory 1024m --cpus 2 --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=${source_dir},target=/src,readonly" \
+            --mount "type=bind,source=${result_dir},target=/out" \
+            --tmpfs /tmp:rw,nosuid,nodev,size=128m \
+            --env PYTHONDONTWRITEBYTECODE=1 --env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+            "$image" /bin/sh -c \
+            'umask 077; python -m pytest -q -p no:cacheprovider --junitxml=/out/private.xml tests/test_wired.py > /out/private.stdout 2> /out/private.stderr'
+          test_exit=$?
+          set -e
+          if [[ "$test_exit" != 0 ]]; then
+            echo 'BLOCKED: isolated source tests did not pass' >&2
+            exit 1
+          fi
+          mkdir -m 700 "${RUNNER_TEMP}/stage6-pr-advisory"
+          HANDOFF_DIR="${RUNNER_TEMP}/stage6-pr-advisory" RESULT_DIR="$result_dir" \
+            RAW_PYTEST_EXIT="$test_exit" EXPECTED_PR_HEAD_SHA="$EXPECTED_PR_HEAD_SHA" \
+            EXPECTED_PR_BASE_SHA="$EXPECTED_PR_BASE_SHA" \
+            python3 controller/stage6_pr_source_v42.py
+      - name: Upload only two anonymous advisory files
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: romarr-stage6-pr-advisory
+          path: |
+            ${{ runner.temp }}/stage6-pr-advisory/advisory.json
+            ${{ runner.temp }}/stage6-pr-advisory/manifest.json
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+          include-hidden-files: false
+
+  isolated_reviewer:
+    name: Separate trusted verifier checks advisory provenance
+    needs: [isolated_source]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout verified controller code without saved credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            controller/stage6_pr_identity_v32.py
+            controller/stage6_pr_receipt_v33.py
+            controller/stage6_pr_archive_v34.py
+            controller/stage6_pr_branch_v35.py
+            controller/stage6_pr_final_gate_v36.py
+            controller/stage6_pr_collector_v37.py
+            controller/stage6_pr_transport_v38.py
+            controller/stage6_pr_entrypoint_v39.py
+            controller/stage6_pr_discovery_v40.py
+            controller/stage6_pr_live_run_v41.py
+          sparse-checkout-cone-mode: false
+      - name: Independently discover and verify exact run artifact bytes
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EXPECTED_CONTROLLER_SHA: ${{ github.sha }}
+          EXPECTED_RUN_ID: ${{ github.run_id }}
+          EXPECTED_RUN_ATTEMPT: ${{ github.run_attempt }}
+          EXPECTED_PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_PR_HEAD_SHA: ${{ inputs.head_sha }}
+          EXPECTED_PR_BASE_SHA: ${{ inputs.base_sha }}
+        run: |
+          set -euo pipefail
+          python3 controller/stage6_pr_discovery_v40.py
