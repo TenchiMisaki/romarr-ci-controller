@@ -132,6 +132,30 @@ tests do not establish authenticated GitHub mutations, distributed scheduling,
 credential transport or operational acceptance. Production code, workflows,
 credentials, state branches, tags and source execution remain unchanged.
 
+### Deployment prerequisite collector — IN PROGRESS
+
+[PR #35](https://github.com/TenchiMisaki/romarr-ci-controller/pull/35) is OPEN /
+UNMERGED at `d8a54b7c9e2322cf78ccdc0a3942e2a586c727f0`, based on merged
+`fdb013cd`. The dormant read-only collector reuses canonical Git state validation
+and exact revision-tag verification, adds fixed numeric repository/owner gates,
+allows only required GET paths, rechecks identity and cannot authorize activation
+or dispatch. GET 404 is classified **NOT FOUND OR NOT VISIBLE**, distinct from
+invalid data and collection failure, rather than claiming proven resource absence.
+
+Local Linux/Python 3.12.14: **68 focused tests PASS**, including 13 new cases with
+real disposable Git state; compilation/whitespace PASS. Gitleaks 8.30.1 final-tree,
+outgoing-history and exact-server-history scans passed with zero findings and a
+verified scanner/positive control. Tree `f5594b08b85b6119e3c2fa9d339f9f0805517f27`
+matches the scanned bytes. Hosted CI and exact-head CodeRabbit are PENDING.
+
+A live read-only run of the actual collector through an authenticated connector
+bridge verified repository identity and independent readback at controller
+`fdb013cd`; state and exact revision-tag reads returned 404, correctly reported as
+NOT FOUND OR NOT VISIBLE. This supersedes the earlier definitive absence wording
+for current prerequisite reporting. No state/tag creation, owner arming, source
+dispatch, credential deployment or protection change occurred. Live operational
+acceptance remains NOT TESTED / NOT ACCEPTED; the manual fallback is preserved.
+
 ### Cross-platform increment
 
 [PR #33](https://github.com/TenchiMisaki/romarr-ci-controller/pull/33), branch
