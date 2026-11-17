@@ -1,6 +1,54 @@
 # ROMarr CI Controller — Fully Automated Project 2
 
-## Current Stage 6 review — November 16, 2026 (Pacific)
+## Current Stage 6 continuation — November 16, 2026 (Pacific)
+
+This section supersedes the older open-review and pending-canary status below;
+the dated earlier checkpoints remain preserved.
+
+- **MERGED:** Controller PR #30 merged into `main` at
+  `4e474dc54a133a490e75540fe021f1275f376245`. The merge tree is
+  `06a57925415a7191dd9ab40286b31476b2a85a44`.
+- **HOSTED MANUAL CANARY PASS:** [Run #44026734606](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44026734606)
+  completed successfully on that merge, event `workflow_dispatch`, attempt 1.
+  Independent API reads and job logs confirmed the isolated source step,
+  allowlisted advisory upload and separate provenance-verifier step all passed.
+  Source PR #31 used head `ea3d78139f7c10931101142cae5b1fc78ad00635`
+  and base `0e48c8855fbba318103f1b9986275eb2bb614580`.
+  The verifier reported `ADVISORY_COLLECTED_NOT_TEST_ACCEPTED` and
+  `TEST_ACCEPTED: false`. The earlier failed canary is superseded by this success.
+- **REUSED:** The recorded 310 unittest / 296 Stage 6 pytest final CI evidence,
+  exact implementation-tree/history Gitleaks 8.30.1 evidence and completed
+  CodeRabbit findings assessment remain valid for their recorded implementation.
+  No source-test rerun was needed to reconcile this status.
+- **BOUNDARY:** The workflow remains manual/advisory-only. Trusted complete test
+  receipts, unattended pytest, automatic remediation, deployment and fallback
+  retirement are not enabled or accepted.
+
+### Remaining coverage and implementation order
+
+| Area | Existing evidence | Remaining acceptance |
+| --- | --- | --- |
+| Exact source and base freshness | Existing v32/v35/v36 positive and rejection tests; successful manual canary | Source movement at the future actual dispatch boundary and complete receipt correlation |
+| Advisory bytes and transport | Existing archive/member/digest, redirect, job/step and source sanitizer regressions | Governed complete receipt acceptance, expired artifact and live transient failure recovery |
+| Concurrency and duplicate claims | Existing manual claim mechanisms are separate from advisory execution | Durable cross-run claims, one global outstanding dispatch, changed revision and duplicate policy |
+| Disarm and restart | No accepted unattended adapter | Owner-only policy, policy generation, restart persistence, in-flight boundary |
+| Partial write / uncertain POST | No accepted live automatic recovery | Persist uncertainty before POST, unique run-ID reconciliation, no blind retry or claim deletion |
+| Operations | Successful read-only monitor runs are dated observations | Native/fallback collision, sustained cadence, real alert delivery, credential renewal and recovery |
+
+**Next isolated change:** develop an offline, disabled-by-default local claim
+ledger prototype and targeted negative/race/restart tests. It must have no network
+adapter, credentials, workflow integration, automatic reset or receipt acceptance.
+A local SQLite race test is not distributed-scheduler acceptance. New source
+publication still needs final-tree/history scans, exact-head CI and CodeRabbit.
+
+**Recovery design:** preserve ambiguous claims and evidence; do not retry uncertain
+dispatch writes or erase a reservation to make a worker proceed. A later adapter
+needs independently authenticated run/source correlation, explicit reconciliation,
+bounded rate/concurrency and tested storage/credential recovery. Disarm prevents
+future attempts but cannot undo an already-issued request. Keep the manual fallback
+until separate operational acceptance.
+
+## Historical Stage 6 review — November 16, 2026 (Pacific)
 
 The corrected manual exact-PR advisory implementation is published in [review PR #30](https://github.com/TenchiMisaki/romarr-ci-controller/pull/30), final implementation head `b874db533bc0bc76f6c33b6aec57f52d6d627572`: two isolated review commits above `8500d14500663050db43b22d93c4cb53c491c498`. The final diff contains 26 files (25 additions and one modified controller CI workflow). This section supersedes older pending-publication and v31-next-step wording below; dated earlier evidence remains preserved.
 
