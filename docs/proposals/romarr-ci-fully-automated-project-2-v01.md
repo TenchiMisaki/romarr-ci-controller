@@ -996,6 +996,39 @@ unbypassed refusal. Do not change protections to gain evidence. Continue unrelat
 owner-control/source-receipt work under its existing boundaries; preserve disabled
 operation, the successful manual canary and independent fallback.
 
+### Next owner-only evidence and independent execution gates — November 17
+
+The protection observer and accepted state canary are complete at their recorded
+scopes. Do not repeat their accepted tests. The next enforcement evidence is an
+existing unbypassed active-rule refusal, not another settings snapshot. The GitHub
+connector's administrative rule-suite history read limitation remains; it has not
+been retried or treated as a protection defect.
+
+**Read-only owner action:** open TenchiMisaki/romarr-ci-controller → Settings →
+Rules → Insights. Filter separately to **Protect controller state** (`27485340`)
+and **Protect controller revisions** (`27484547`), with a time period including
+November 17. Inspect existing Failed entries and expand the ruleset details;
+retain the ref, time, overall result, specific failed rule and whether enforcement
+was Active rather than Evaluate or Bypass. A screenshot/details can supply an
+owner observation for independent assessment, not automatic acceptance. If no
+matching failures exist, record NO RELEVANT REFUSAL OBSERVED; that is not a broken
+protection or proof of enforcement. Do not generate failures by deleting or force-
+updating real refs. Current official navigation was checked against:
+https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/managing-rulesets-for-a-repository
+
+| Independent gate | Existing verified preparation | Missing before live execution |
+| --- | --- | --- |
+| Protected-ref refusal | Active approved configuration and branch applicability; retained manual canary observations | Administrative evaluation evidence or separately owner-approved safe test scope |
+| Owner-bound advisory trial | Reviewed TrialApproval/OwnerTrialController scope, expiry, source pin and pre-POST guard libraries | Accepted trusted deployment/owner entrypoint and independent approval pin, exact source/controller and time window; protected revision identity and isolated API roles |
+| Complete source receipt | Reviewed anonymous producer and ordered authenticated collector libraries | Approved exact source/head/base, trusted full-suite scope/expected case inventory and skip policy, isolated hosted runner, live run/job/artifact correlation |
+| Unattended handoff | Existing coordinator/recovery/receipt components and independent manual fallback | Separate source/dispatch/scheduler/collision/alerts/recovery evidence and explicit owner acceptance |
+
+The one approved state canary does not authorize a source dispatch, new credential
+or service deployment, or unattended testing. Only the dependent live actions are
+blocked; isolated design/review can continue within existing authorization. No
+production, settings, workflow, credentials, ref or fork-sync change was made by
+this evidence-plan update. Operational state remains disabled.
+
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
 The owner explicitly approved the exact disabled bootstrap and additive
