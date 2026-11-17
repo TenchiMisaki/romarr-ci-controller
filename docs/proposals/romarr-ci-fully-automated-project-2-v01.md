@@ -774,7 +774,7 @@ validation run also needs owner authorization. Existing implementation tests,
 privacy scans, exact-head CI/review and recovery gates remain required. Independent
 preparation and review may continue while those acceptance boundaries remain blocked.
 
-### Verified-sibling criterion proposal — PR #43 OPEN / NOT INSTALLED
+### Verified-sibling criterion — PR #43 MERGED / ONE MANUAL VALIDATION APPROVED
 
 [PR #43](https://github.com/TenchiMisaki/romarr-ci-controller/pull/43) proposes
 replacing reliance on a specific rejection message with independent candidate
@@ -836,15 +836,32 @@ PR #43 remains unmerged solely at the explicit owner acceptance/installation gat
 main is still `3238861d` and operational state remains disabled at `d2930189`.
 No new live canary run was initiated.
 
-**Approval boundary:** this intentionally changes manual-canary acceptance, so
-PR #43 remains OPEN / UNMERGED pending explicit owner approval after completed
-review. Do not install automatically or retroactively relabel run #44181621002
-as PASS. Proposed live behavior and operational acceptance remain NOT TESTED.
-One further bounded manual live validation also needs owner authorization.
-No additional canary run, source dispatch, unattended activation, operational-state
-write, ruleset change, force/delete/reset, or fork-sync modification occurred.
-Current main and the disabled operational state remain unchanged. Existing
-publication/review requirements and retained canary recovery history remain.
+**Owner approval and installed revision (November 17, 2026):** the owner explicitly
+approved merging PR #43 and one bounded manual validation run. PR #43 merged at
+`1327160afab30de83128e34501581f7ff4aa23b0`; independent REST readback confirms
+exact tested/scanned tree `a6b228d6e9104be859446eed3039a7f504407035` and ordered
+parents `3238861d` / `9be1c4c6`. Main points at that merge. The criterion is now
+APPROVED / INSTALLED; this supersedes the earlier proposal-only installation
+boundary. The proposal document retains its pre-approval wording as historical
+review context; this authoritative entry records the later explicit decision.
+
+**One manual validation is APPROVED / NOT STARTED by this assistant.** The GitHub
+connector cannot dispatch workflows, and there is no authenticated local CLI.
+The owner may open the official Manual controller state canary workflow, choose
+NEW Run workflow on main, replace the entire controller_sha input with
+`1327160afab30de83128e34501581f7ff4aa23b0`, enter approval
+`CREATE_RETAINED_CANARY_ONLY`, and run once. Do not rerun an older workflow run or
+reuse an older controller SHA. Preserve all retained canary history. After it
+starts, independently verify exact revision, run/attempt, artifact, sibling
+candidate evidence, recovery readback and unchanged operational state.
+
+Proposed/installed criterion live behavior and operational acceptance remain
+NOT TESTED pending that run. Do not retroactively relabel #44181621002 as PASS.
+No additional mutating run is authorized automatically after this single attempt.
+No source dispatch, unattended activation, operational-state write, ruleset change,
+force/delete/reset, or fork-sync modification occurred. Operational state remains
+unchanged and disabled at `d2930189ec0aa9c59b1a2fdf108fe75892f9ad03`.
+Existing publication/review requirements and retained canary recovery history remain.
 
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
