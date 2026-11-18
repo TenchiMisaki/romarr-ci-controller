@@ -177,6 +177,16 @@ class Controller:
         self.dispatch(key, nonce)
         return 'DISPATCHED_NOT_TEST_ACCEPTED'
 
+    def _require_owner(self):
+        """Validate fresh user and repository identity before an owner action."""
+        user, repository = self.ports.owner()
+        owner = repository.get('owner') if type(repository) is dict else None
+        if (type(user) is not dict or type(user.get('id')) is not int
+                or user['id'] != OWNER_ID or type(owner) is not dict
+                or type(owner.get('id')) is not int or owner['id'] != OWNER_ID
+                or repository.get('full_name') != CONTROLLER_REPO):
+            raise StateBlocked('AUTHENTICATED_OWNER_REQUIRED')
+
     def policy(self, enabled):
         """Require a fresh credential-authenticated owner, never a PR actor.
 
@@ -184,11 +194,9 @@ class Controller:
         owner identity; caller-provided event actor strings are insufficient.
         Arming is additionally impossible without separate operational acceptance.
         """
-        user, repository = self.ports.owner()
-        if (type(enabled) is not bool or type(user.get('id')) is not int
-                or user['id'] != OWNER_ID or repository.get('full_name') != CONTROLLER_REPO
-                or repository.get('owner', {}).get('id') != OWNER_ID):
+        if type(enabled) is not bool:
             raise StateBlocked('AUTHENTICATED_OWNER_REQUIRED')
+        self._require_owner()
         if enabled and not self._accepted():
             raise StateBlocked('OPERATIONAL_ACCEPTANCE_REQUIRED')
         def update(state):

@@ -153,6 +153,21 @@ The collector is a dormant library, not an installed entrypoint or workflow.
 
 ### Owner-bound single-revision advisory trial
 
+`owner_trial.OwnerTrialEntrypoint` provides in-process arm, disarm and known-run
+recovery methods for a separately trusted host. The host supplies the approved
+digest and controller revision independently of approval bytes. Arm and disarm
+reuse the coordinator's fresh owner authentication. Manual recovery also checks
+the authenticated owner before any run read or state mutation. Expiry continues
+to permit authenticated disarm and recovery. Automatic binding of the direct
+dispatch response retains its existing run-verification path.
+
+This library adds no installed caller or deployment acceptance record. Before
+live use, independently accept the host, caller-to-credential identity binding,
+protected configuration, isolated API roles and exact approved trial window.
+Synthetic entrypoint tests establish offline rejection and recovery behavior.
+Hosted owner authentication, credential isolation and operational acceptance
+remain NOT TESTED.
+
 `owner_trial.TrialApproval` validates bounded canonical approval bytes against a
 SHA-256 pin supplied independently by a trusted deployment. The record binds
 the fixed controller/source repositories, authenticated owner's numeric ID,
