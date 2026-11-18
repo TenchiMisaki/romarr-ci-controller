@@ -1,0 +1,31 @@
+name: Manual owner-control preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: controller-owner-control-preflight
+  cancel-in-progress: false
+
+jobs:
+  offline-owner-control:
+    if: github.repository_id == '1458032121' && github.actor_id == '71314201' && github.triggering_actor == github.actor && github.run_attempt == '1' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the controller revision for this run
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - name: Verify owner controls with synthetic approvals and state
+        env:
+          PYTHONPATH: controller
+        run: python -m unittest discover -s tests -p test_owner_trial.py -v
