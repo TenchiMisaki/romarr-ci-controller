@@ -1030,9 +1030,10 @@ production, settings, workflow, credentials, ref or fork-sync change was made by
 this evidence-plan update. Operational state remains disabled.
 
 
-### Owner action entrypoint — REVIEW IN PROGRESS, November 17, 2026 (Pacific)
+### Owner action entrypoint — MERGED, November 17, 2026 (Pacific)
 
-[PR #45](https://github.com/TenchiMisaki/romarr-ci-controller/pull/45) proposes a dormant
+[PR #45](https://github.com/TenchiMisaki/romarr-ci-controller/pull/45) merged at
+`647e9bfb46811a6567d201de428c04010b0a4c15` and adds a dormant
 in-process owner action adapter at head `df328cd649431b0376aaf4c2b94b44827aae3848`,
 based on merged main `744804afa5279ca377c9e8c7259ba9f24f892475`.
 It binds independently configured approval digest/controller identity, reuses
@@ -1049,12 +1050,14 @@ this recovered the missing publication capability without a workflow rerun.
 PASS: 525 unittest cases / 3 Windows-only skips / 296 pytest cases, compilation,
 artifact and read-only monitor checks. Actual CI merge `266ca8f1` matches tree
 `3a3cc9103d489ca0a09efd3c27cb5607e1faeeae` and ordered base/head parents.
-CodeRabbit is automatically reviewing this exact head; independent review and
-merge remain PENDING. Live host/owner credential binding and operational
+[CodeRabbit assessment](https://github.com/TenchiMisaki/romarr-ci-controller/pull/45#issuecomment-6966646457)
+covers the exact head with zero actionable issues and no retained architecture
+concerns; no review threads. Independent merge/main readback verifies the exact
+tested tree and ordered base/head parents. Live host/owner credential binding and operational
 acceptance remain NOT TESTED. Unattended source testing remains disabled.
 
-Next safe task: finish the exact-head CodeRabbit gate, address validated findings,
-then merge under standing fork-only authority and independently verify the result.
+Next safe task: reconcile the trusted complete-source inventory/skip-policy
+boundary and deployment acceptance requirements before any live trial.
 The approved manual state canary remains accepted at its existing scope and is
 not repeated. Deployment acceptance still requires an independently trusted host,
 protected approval configuration, isolated credential roles and exact trial scope.
