@@ -8,7 +8,7 @@ import unittest
 from controller_cycle import Controller, WORKFLOW
 from controller_api import GitHubPorts
 from durable_state import GitHubState, StateBlocked, encode
-from owner_trial import OwnerTrialController, SCOPE, TrialApproval
+from owner_trial import OwnerTrialController, OwnerTrialEntrypoint, SCOPE, TrialApproval
 from stage6_pr_identity_v32 import CONTROLLER_REPO, ExactPR, SOURCE_REPO
 from test_controller_cycle import MemoryState, Ports
 from test_git_state_integration import LocalGitAPI
@@ -47,6 +47,69 @@ class TrialTests(unittest.TestCase):
         """Use the real owner policy and durable reservation transitions."""
         self.controller.policy(True)
         return self.controller.reserve(self.source, self.now)
+
+    def owner_entrypoint(self, *, raw=None):
+        """Take the approved hash from the synthetic deployment configuration."""
+        approved = encode(approval_record())
+        return OwnerTrialEntrypoint(self.store, self.ports, controller_sha=SHA,
+            approval_digest=hashlib.sha256(approved).hexdigest(),
+            approval_bytes=approved if raw is None else raw, clock=lambda: self.now)
+
+    def test_owner_entrypoint_refuses_different_approval_bytes(self):
+        other_source = dict(approval_record(), pr=43)
+        with self.assertRaisesRegex(StateBlocked, 'TRIAL_APPROVAL_IDENTITY_INVALID'):
+            self.owner_entrypoint(raw=encode(other_source))
+        self.assertEqual(self.store.version, 0)
+        self.assertEqual(self.ports.posts, 0)
+
+    def test_owner_entrypoint_blocks_wrong_repository_and_expired_arm(self):
+        entrypoint = self.owner_entrypoint()
+        owner = self.ports.owner
+        self.ports.owner = lambda: (owner()[0], dict(owner()[1], full_name='other/repo'))
+        with self.assertRaisesRegex(StateBlocked, 'AUTHENTICATED_OWNER_REQUIRED'):
+            entrypoint.arm()
+        self.ports.owner = owner
+        self.now = 200
+        with self.assertRaisesRegex(StateBlocked, 'OPERATIONAL_ACCEPTANCE_REQUIRED'):
+            entrypoint.arm()
+        self.assertEqual(self.store.version, 0)
+        self.assertEqual(self.ports.posts, 0)
+
+    def test_owner_entrypoint_rejects_malformed_or_boolean_owner_identity(self):
+        entrypoint = self.owner_entrypoint()
+        user, repository = self.ports.owner()
+        invalid = [(None, repository), (user, None), (user, dict(repository, owner=None)),
+                   (user, dict(repository, owner={'id': True})),
+                   (dict(user, id=True), repository)]
+        for identity in invalid:
+            with self.subTest(identity=identity):
+                self.ports.owner = lambda: identity
+                with self.assertRaisesRegex(StateBlocked, 'AUTHENTICATED_OWNER_REQUIRED'):
+                    entrypoint.arm()
+                with self.assertRaisesRegex(StateBlocked, 'AUTHENTICATED_OWNER_REQUIRED'):
+                    entrypoint.recover_known_run('unknown', 'unknown', 123)
+        self.assertEqual(self.store.version, 0)
+        self.assertEqual(self.ports.posts, 0)
+
+    def test_owner_entrypoint_reauthenticates_recovery_after_expiry(self):
+        entrypoint = self.owner_entrypoint()
+        entrypoint.arm()
+        key, nonce = self.controller.reserve(self.source, self.now)
+        self.ports.error = True
+        with self.assertRaises(TimeoutError):
+            self.controller.dispatch(key, nonce)
+        self.now = 200
+        self.ports.owner_id = 1
+        before = self.store.load()
+        with self.assertRaisesRegex(StateBlocked, 'AUTHENTICATED_OWNER_REQUIRED'):
+            entrypoint.recover_known_run(key, nonce, 123)
+        self.assertEqual(self.store.load(), before)
+        self.ports.owner_id = approval_record()['owner_id']
+        entrypoint.disarm()
+        entrypoint.recover_known_run(key, nonce, 123)
+        self.assertFalse(self.store.value['policy']['enabled'])
+        self.assertEqual(self.store.value['claims'][key]['run_id'], 123)
+        self.assertEqual(self.ports.posts, 1)
 
     def test_exact_approved_trial_dispatches_once_and_does_not_accept_tests(self):
         key, nonce = self.arm_reserve()

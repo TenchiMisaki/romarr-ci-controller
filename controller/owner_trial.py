@@ -100,3 +100,31 @@ class OwnerTrialController(Controller):
     def _dispatch(self, source, inputs):
         """Recheck after the adapter's last tag lookup, before its POST request."""
         return self.ports.dispatch(self.sha, inputs, pre_post=lambda: self._accepted(source))
+
+
+class OwnerTrialEntrypoint:
+    """In-process owner actions for an independently trusted deployment host.
+
+    Host configuration provides the revision and approval digest independently
+    of the approval bytes. No command line, workflow, or credential loader is
+    installed. The host must bind its calling identity to the owner API role.
+    """
+
+    def __init__(self, store, ports, *, controller_sha, approval_digest, approval_bytes, clock=None):
+        approval = TrialApproval(approval_bytes, expected_digest=approval_digest,
+                                 controller_sha=controller_sha, clock=clock)
+        self._trial = OwnerTrialController(store, ports, controller_sha=controller_sha,
+                                           approval=approval)
+
+    def arm(self):
+        """Arm the pinned trial after the coordinator rechecks owner and expiry."""
+        self._trial.policy(True)
+
+    def disarm(self):
+        """Disarm through fresh owner authentication, including after expiry."""
+        self._trial.policy(False)
+
+    def recover_known_run(self, key, nonce, run_id):
+        """Bind independently known run evidence through the owner recovery path."""
+        self._trial._require_owner()
+        self._trial.reconcile(key, nonce, run_id)
