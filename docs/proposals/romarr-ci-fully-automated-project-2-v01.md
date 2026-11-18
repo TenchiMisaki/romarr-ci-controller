@@ -1029,6 +1029,36 @@ blocked; isolated design/review can continue within existing authorization. No
 production, settings, workflow, credentials, ref or fork-sync change was made by
 this evidence-plan update. Operational state remains disabled.
 
+
+### Owner action entrypoint — REVIEW IN PROGRESS, November 17, 2026 (Pacific)
+
+[PR #45](https://github.com/TenchiMisaki/romarr-ci-controller/pull/45) proposes a dormant
+in-process owner action adapter at head `df328cd649431b0376aaf4c2b94b44827aae3848`,
+based on merged main `744804afa5279ca377c9e8c7259ba9f24f892475`.
+It binds independently configured approval digest/controller identity, reuses
+fresh owner authentication for arm/disarm and requires the same authentication
+before manual known-run recovery. Expiry preserves authenticated disarm/recovery.
+Automatic direct-response run binding retains the existing coordinator path.
+
+77 focused owner-trial/coordinator/API/real-Git tests PASS. Compilation, diff checks,
+Gitleaks 8.30.1 complete candidate tree and outgoing local/server/CI-merge history
+scans PASS, with a detected synthetic positive control. The exact signed base
+commit and server candidate were reconstructed and matched by Git object identity;
+this recovered the missing publication capability without a workflow rerun.
+[CI #44219405346](https://github.com/TenchiMisaki/romarr-ci-controller/actions/runs/44219405346)
+PASS: 525 unittest cases / 3 Windows-only skips / 296 pytest cases, compilation,
+artifact and read-only monitor checks. Actual CI merge `266ca8f1` matches tree
+`3a3cc9103d489ca0a09efd3c27cb5607e1faeeae` and ordered base/head parents.
+CodeRabbit is automatically reviewing this exact head; independent review and
+merge remain PENDING. Live host/owner credential binding and operational
+acceptance remain NOT TESTED. Unattended source testing remains disabled.
+
+Next safe task: finish the exact-head CodeRabbit gate, address validated findings,
+then merge under standing fork-only authority and independently verify the result.
+The approved manual state canary remains accepted at its existing scope and is
+not repeated. Deployment acceptance still requires an independently trusted host,
+protected approval configuration, isolated credential roles and exact trial scope.
+
 ### Approved disabled storage/revision bootstrap — STATE CREATED / ENFORCEMENT PENDING
 
 The owner explicitly approved the exact disabled bootstrap and additive
