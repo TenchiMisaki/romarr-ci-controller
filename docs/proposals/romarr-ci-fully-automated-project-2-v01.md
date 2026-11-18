@@ -1056,8 +1056,23 @@ concerns; no review threads. Independent merge/main readback verifies the exact
 tested tree and ordered base/head parents. Live host/owner credential binding and operational
 acceptance remain NOT TESTED. Unattended source testing remains disabled.
 
-Next safe task: reconcile the trusted complete-source inventory/skip-policy
-boundary and deployment acceptance requirements before any live trial.
+Remaining acceptance reconciliation after merge:
+
+| Gate | Verified preparation | Exact remaining requirement |
+| --- | --- | --- |
+| Owner-control deployment | PR #45 source/local/hosted/review gates PASS | Accepted trusted host and caller-to-owner-credential binding, isolated roles and protected approval configuration. The approved bootstrap pin is only `8a981726`; a new immutable pin for `647e9bfb` requires scoped owner authorization. No new tag was created. |
+| Source dispatch and recovery | Existing correlation/fence/recovery code and retained accepted state canary | Exact approved source PR/head/base and controller, trial window, independently pinned approval and accepted source execution environment. No live source trial is authorized by the state canary. |
+| Complete source receipts and skips | Existing anonymous producer and ordered collector; skipped cases cannot be represented as PASS | Independently trusted full-suite inventory/count and owner-accepted skip policy, authenticated live job/artifact/execution evidence. Count consistency alone cannot establish suite completeness. |
+| Platform execution | Existing Docker, Windows and EXE probes and controller contracts | Prepared immutable artifacts, accepted disposable runners and actual provenance. Current local capability check found only Python 3.15 and no Docker command; Windows 3.11/3.13 and Docker execution remain NOT TESTED. |
+| Notifications and scheduling | Existing persistence, uncertainty and collision contracts | Accepted provider/credentials, real delivery/recovery and sustained scheduler/collision evidence on an approved host. |
+| Security enforcement | Accepted configuration/applicability and retained canary scope | Administrative active/unbypassed refusal evidence or separately approved safe test scope. No destructive probes. |
+| Protected publication | GitHub backlog and companion readback PASS | Separate approved protected-document diff/publication and independent destination/Instructions readback. |
+
+Next executable task requires the owner to establish the trusted deployment host
+and isolated identity roles, and authorize the exact controller revision pin and
+bounded source trial scope. These missing inputs block the dependent live actions.
+All offline implementation, local verification, hosted CI and independent review
+for this owner-entrypoint increment are complete.
 The approved manual state canary remains accepted at its existing scope and is
 not repeated. Deployment acceptance still requires an independently trusted host,
 protected approval configuration, isolated credential roles and exact trial scope.
