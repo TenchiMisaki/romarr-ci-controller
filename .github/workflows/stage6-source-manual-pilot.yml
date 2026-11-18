@@ -1,4 +1,4 @@
-name: ROMarr Stage 6 - Pinned source isolation pilot (MANUAL, ADVISORY)
+name: ROMarr Stage 6 - Focused inventory canary (MANUAL, ADVISORY)
 
 # Manual-only, no source PR selection, publication, dispatch or schedule.
 # Focused immutable-source test only. NOT an accepted PR receipt.
@@ -99,7 +99,53 @@ jobs:
           from pathlib import Path
           import re
           import stat
-          import xml.etree.ElementTree as ET
+          """Check case identities in JUnit from the reviewed, focused wiring canary."""
+          import hashlib
+          import re
+          from xml.etree import ElementTree
+
+          CASE_CLASS = "tests.test_wired"
+          CASE_NAME = re.compile(
+              r"test_the_service_can_reach_every_module\[[A-Za-z_][A-Za-z0-9_]*\]"
+              r"|test_the_exemption_list_stays_small"
+          )
+
+
+          def verify_focused_inventory(report: bytes, expected_count: int, expected_digest: str) -> None:
+              """Verify the exact ordered passing list without publishing case identities.
+
+              This checks the report contents. The caller owns report provenance.
+              """
+              if (type(report) is not bytes or not 0 < len(report) <= 500_000
+                      or type(expected_count) is not int or not 1 <= expected_count <= 256
+                      or not re.fullmatch(r"[a-f0-9]{64}", expected_digest)):
+                  raise ValueError("Invalid focused inventory inputs")
+              try:
+                  xml = report.decode("utf-8")
+                  if "\x00" in xml or re.search(r"<!\s*(?:DOCTYPE|ENTITY)\b", xml, re.I):
+                      raise ValueError("Unsafe focused inventory XML")
+                  document = ElementTree.fromstring(xml)
+              except (UnicodeError, ElementTree.ParseError):
+                  raise ValueError("Invalid focused inventory XML") from None
+
+              if document.tag != "testsuites" or len(document) != 1 or document[0].tag != "testsuite":
+                  raise ValueError("Unexpected focused inventory structure")
+              suite = document[0]
+              totals = {"tests": str(expected_count), "failures": "0", "errors": "0", "skipped": "0"}
+              if len(suite) != expected_count or any(suite.get(key) != value for key, value in totals.items()):
+                  raise ValueError("Unexpected focused inventory totals")
+
+              nodes = []
+              for case in suite:
+                  name = case.get("name", "")
+                  if (case.tag != "testcase" or case.get("classname") != CASE_CLASS
+                          or not CASE_NAME.fullmatch(name) or len(case)):
+                      raise ValueError("Unexpected focused case identity or outcome")
+                  nodes.append(f"tests/test_wired.py::{name}")
+
+              fingerprint = hashlib.sha256(("\n".join(nodes) + "\n").encode("utf-8")).hexdigest()
+              if len(set(nodes)) != expected_count or fingerprint != expected_digest:
+                  raise ValueError("Focused inventory does not match the baseline")
 
           if os.environ.get('RAW_EXIT') != '0':
               raise SystemExit('BLOCKED: raw test exit was nonzero')
@@ -113,36 +159,11 @@ jobs:
           if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or
                   info.st_mode & 0o077 or not 0 < info.st_size <= 500_000):
               raise SystemExit('BLOCKED: private result file unsafe')
-          raw = source.read_bytes()
-          if re.search(rb'<!\s*(?:DOCTYPE|ENTITY)\b', raw, flags=re.I):
-              raise SystemExit('BLOCKED: XML prohibited construct')
+          total = 70
           try:
-              doc = ET.fromstring(raw)
-          except ET.ParseError:
-              raise SystemExit('BLOCKED: malformed private XML') from None
-          suites = ([doc] if doc.tag == 'testsuite' else
-                    list(doc) if doc.tag == 'testsuites' else [])
-          if not suites or any(s.tag != 'testsuite' for s in suites):
-              raise SystemExit('BLOCKED: unexpected test suite shape')
-          total = 0
-          for suite in suites:
-              cases = [x for x in suite if x.tag == 'testcase']
-              if any(x.tag not in ('testcase', 'properties', 'system-out', 'system-err') for x in suite):
-                  raise SystemExit('BLOCKED: unexpected JUnit child')
-              fields = ('tests', 'failures', 'errors', 'skipped')
-              try:
-                  declared = {name: int(suite.attrib[name]) for name in fields}
-              except (KeyError, ValueError):
-                  raise SystemExit('BLOCKED: missing JUnit totals') from None
-              if not 0 < declared['tests'] <= 256 or any(v < 0 for v in declared.values()):
-                  raise SystemExit('BLOCKED: unbounded JUnit totals')
-              if declared != {'tests': len(cases), 'failures': 0, 'errors': 0, 'skipped': 0}:
-                  raise SystemExit('BLOCKED: JUnit totals mismatch or non-passing case')
-              if any(x.tag in ('failure', 'error', 'skipped') for case in cases for x in case):
-                  raise SystemExit('BLOCKED: JUnit contained non-passing outcomes')
-              total += len(cases)
-          if not 0 < total <= 256:
-              raise SystemExit('BLOCKED: JUnit case budget exceeded')
+              verify_focused_inventory(source.read_bytes(), total, 'd38c3a6bce1289857259db2d513a5914cf362773f4748de61b84aac8dc367665')
+          except ValueError:
+              raise SystemExit('BLOCKED: focused JUnit inventory failed validation') from None
           source_sha = os.environ['EXPECTED_SOURCE_SHA']
           if not re.fullmatch('[a-f0-9]{40}', source_sha):
               raise SystemExit('BLOCKED: invalid source output SHA')
@@ -178,7 +199,7 @@ jobs:
           outcomes = os.environ['UNTRUSTED_CASES']
           exit_code = os.environ['UNTRUSTED_EXIT']
           state = os.environ['SOURCE_JOB_RESULT']
-          if sha != expected or not re.fullmatch('P{1,256}', outcomes):
+          if sha != expected or not re.fullmatch('P{70}', outcomes):
               raise SystemExit('BLOCKED: source identity or case handoff mismatch')
           if exit_code != '0' or state != 'success':
               raise SystemExit('BLOCKED: untrusted source result was not successful')
