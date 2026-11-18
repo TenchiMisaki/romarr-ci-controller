@@ -30,7 +30,7 @@ class SourceCollection:
 
 
 def collect_source_receipt(*, expected, source, get_json, get_artifact_bytes,
-                           verify_execution=None):
+                           verify_execution=None, verify_inventory=None):
     """Bind a full-source envelope to ordered independent live observations.
 
     The trusted host must approve expected workflow/job/step/source scope before
@@ -42,7 +42,8 @@ def collect_source_receipt(*, expected, source, get_json, get_artifact_bytes,
     """
     if (type(expected) is not ExpectedPlatform or type(source) is not ExactPR
             or not callable(get_json) or not callable(get_artifact_bytes)
-            or verify_execution is not None and not callable(verify_execution)):
+            or verify_execution is not None and not callable(verify_execution)
+            or verify_inventory is not None and not callable(verify_inventory)):
         return SourceCollection('BLOCKED', 'SOURCE_COLLECTOR_INPUT_INVALID')
     e = expected
     if (e.platform not in SOURCE_PLATFORMS or e.scope != 'source-full'
@@ -76,8 +77,10 @@ def collect_source_receipt(*, expected, source, get_json, get_artifact_bytes,
             raise PlatformRejected('SOURCE_ARTIFACT_BYTE_COUNT_MISMATCH')
         # Validate the entire envelope, anonymous cases, counts and full scope
         # before invoking a separately privileged provenance verifier.
-        verify_platform(e, raw=raw, run=run, jobs=jobs, artifact=artifact,
+        validated = verify_platform(e, raw=raw, run=run, jobs=jobs, artifact=artifact,
                         source_before=identity, source_after=identity)
+        if verify_inventory is not None and verify_inventory(e, dict(validated.case_counts)) is not True:
+            return SourceCollection('BLOCKED', 'SOURCE_INVENTORY_MISMATCH')
         proof = None if verify_execution is None else verify_execution(e)
         # Reject expiry or metadata/source changes during download/provenance.
         run, jobs, artifact = metadata_read()
