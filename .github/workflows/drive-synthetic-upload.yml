@@ -1,0 +1,33 @@
+name: Synthetic Drive upload
+on:
+  push:
+    branches:
+      - review/drive-synthetic-upload
+    paths:
+      - '.github/workflows/drive-synthetic-upload.yml'
+      - 'tools/drive_probe.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: romarr-drive-synthetic-upload
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    if: github.repository == 'TenchiMisaki/romarr-ci-controller' && github.ref == 'refs/heads/review/drive-synthetic-upload'
+    environment: romarr-drive-synthetic
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Check out the exact pushed revision
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Upload and read back synthetic evidence
+        run: python3 tools/drive_probe.py
+        env:
+          ROMARR_DRIVE_OAUTH: ${{ secrets.ROMARR_DRIVE_OAUTH }}
+          ROMARR_DRIVE_FOLDER: ${{ secrets.ROMARR_DRIVE_FOLDER }}
